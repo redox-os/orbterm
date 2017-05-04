@@ -1,71 +1,24 @@
 [package]
-name = "orbutils"
-description = "The Orbital Utilities"
-repository = "https://github.com/redox-os/orbutils"
-version = "0.1.14"
+name = "orbterm"
+description = "The Orbital Terminal"
+repository = "https://github.com/redox-os/orbterm"
+version = "0.1.0"
 license-file = "LICENSE"
 readme = "README.md"
 authors = ["Jeremy Soller <jackpot51@gmail.com>"]
 
 [[bin]]
-name = "browser"
-path = "src/browser/main.rs"
-
-[[bin]]
-name = "calculator"
-path = "src/calculator/main.rs"
-
-[[bin]]
-name = "character_map"
-path = "src/character_map/main.rs"
-
-[[bin]]
-name = "editor"
-path = "src/editor/main.rs"
-
-[[bin]]
-name = "file_manager"
-path = "src/file_manager/main.rs"
-
-[[bin]]
-name = "launcher"
-path = "src/launcher/main.rs"
-
-[[bin]]
-name = "orblogin"
-path = "src/orblogin/main.rs"
-
-[[bin]]
-name = "terminal"
-path = "src/terminal/main.rs"
-
-[[bin]]
-name = "viewer"
-path = "src/viewer/main.rs"
+name = "orbterm"
+path = "src/main.rs"
 
 [dependencies]
-html5ever = "0.12"
-html5ever-atoms = "0.1"
-hyper-rustls = "0.3"
-mime_guess = "1.8"
-mime = "0.2"
 orbclient = "0.3"
 orbfont = "0.1"
-orbimage = "0.1"
-orbtk = "0.2"
 ransid = "0.2"
-rustls = "0.5"
-tendril = "0.2"
-url = "1.2"
-userutils = { git = "https://github.com/redox-os/userutils.git" }
-
-[dependencies.hyper]
-version = "0.10"
-default-features = false
 
 [target.'cfg(not(target_os = "redox"))'.dependencies]
 libc = "0.2"
 
 [target.'cfg(target_os = "redox")'.dependencies]
-redox_event = { git = "https://github.com/redox-os/event.git" }
+redox_event = "0.1"
 redox_syscall = "0.1"
