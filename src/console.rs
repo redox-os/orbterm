@@ -362,7 +362,6 @@ impl Console {
                         }
                     },
                     ransid::Event::ScreenBuffer { alternate, clear } => {
-                        println!("ScreenBuffer {}", alternate);
                         if *alt != alternate {
                             mem::swap(grid, alt_grid);
 
