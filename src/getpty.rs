@@ -1,11 +1,11 @@
 use std::os::unix::io::RawFd;
 
 #[cfg(not(target_os="redox"))]
-pub fn getpty() -> (RawFd, String) {
+pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
     use libc;
     use std::ffi::CStr;
     use std::fs::OpenOptions;
-    use std::io::Error;
+    use std::io::{self, Error};
     use std::os::unix::fs::OpenOptionsExt;
     use std::os::unix::io::IntoRawFd;
 
@@ -31,12 +31,24 @@ pub fn getpty() -> (RawFd, String) {
         }
     }
 
+    unsafe {
+        let size = libc::winsize {
+            ws_row: lines as libc::c_ushort,
+            ws_col: columns as libc::c_ushort,
+            ws_xpixel: 0,
+            ws_ypixel: 0
+        };
+        if libc::ioctl(master_fd, libc::TIOCSWINSZ, &size as *const libc::winsize) < 0 {
+            panic!("ioctl: {:?}", io::Error::last_os_error());
+        }
+    }
+
     let tty_path = unsafe { CStr::from_ptr(ptsname(master_fd)).to_string_lossy().into_owned() };
     (master_fd, tty_path)
 }
 
 #[cfg(target_os="redox")]
-pub fn getpty() -> (RawFd, String) {
+pub fn getpty(_columns: u32, _lines: u32) -> (RawFd, String) {
     use syscall;
 
     let master = syscall::open("pty:", syscall::O_RDWR | syscall::O_CREAT | syscall::O_NONBLOCK).unwrap();
