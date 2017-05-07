@@ -154,7 +154,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
 
         match process.try_wait() {
             Ok(status) => match status {
-                Some(code) => {
+                Some(_code) => {
                     break 'events;
                 },
                 None => ()
