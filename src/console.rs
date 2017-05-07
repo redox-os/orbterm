@@ -7,6 +7,9 @@ use std::io::Result;
 use orbclient::{Color, EventOption, Renderer, Window, WindowFlag};
 use orbfont::Font;
 
+static FONT: &'static [u8] = include_bytes!("../res/FiraMono-Regular.ttf");
+static FONT_BOLD: &'static [u8] = include_bytes!("../res/FiraMono-Bold.ttf");
+
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
 #[cold]
@@ -74,8 +77,8 @@ impl Console {
             grid: grid.clone(),
             alt_grid: grid,
             window: window,
-            font: Font::from_path("res/Regular.ttf").unwrap(),
-            font_bold: Font::from_path("res/Bold.ttf").unwrap(),
+            font: Font::from_data(FONT).unwrap(),
+            font_bold: Font::from_data(FONT_BOLD).unwrap(),
             changed: BTreeSet::new(),
             mouse_x: 0,
             mouse_y: 0,
