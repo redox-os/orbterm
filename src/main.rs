@@ -32,7 +32,7 @@ mod slave_stdio;
 
 fn main() {
     let mut args = env::args().skip(1);
-    let shell = args.next().unwrap_or("sh".to_string());
+    let shell = args.next().unwrap_or(env::var("SHELL").unwrap_or("sh".to_string()));
 
     let (display_width, display_height) = orbclient::get_display_size().expect("terminal: failed to get display size");
     let (columns, lines) = (cmp::min(1024, display_width * 4/5) / 8, cmp::min(768, display_height * 4/5) / 16);
