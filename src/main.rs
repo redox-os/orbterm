@@ -1,7 +1,6 @@
 #![deny(warnings)]
 #![feature(asm)]
 #![feature(const_fn)]
-#![feature(process_try_wait)]
 
 extern crate orbclient;
 extern crate orbfont;
