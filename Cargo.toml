@@ -20,5 +20,5 @@ ransid = "0.2"
 libc = "0.2"
 
 [target.'cfg(target_os = "redox")'.dependencies]
-redox_event = "0.1"
+redox_termios = "0.1"
 redox_syscall = "0.1"

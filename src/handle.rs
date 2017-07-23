@@ -8,7 +8,8 @@ use console::Console;
 
 #[cfg(target_os = "redox")]
 pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
-    extern crate syscall;
+    use redox_termios;
+    use syscall;
 
     use std::os::unix::io::AsRawFd;
 
@@ -30,7 +31,13 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                 match event_option {
                     EventOption::Quit(_) => return false,
                     EventOption::Resize(_) => {
-                        //TODO: Send resize to PTY
+                        if let Ok(winsize_fd) = syscall::dup(master_fd, b"winsize") {
+                            let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
+                                ws_row: console.console.h as u16,
+                                ws_col: console.console.w as u16
+                            });
+                            let _ = syscall::close(winsize_fd);
+                        }
                     },
                     _ => ()
                 }

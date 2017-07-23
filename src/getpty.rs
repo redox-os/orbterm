@@ -48,10 +48,20 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
 }
 
 #[cfg(target_os="redox")]
-pub fn getpty(_columns: u32, _lines: u32) -> (RawFd, String) {
+pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
+    use redox_termios;
     use syscall;
 
     let master = syscall::open("pty:", syscall::O_RDWR | syscall::O_CREAT | syscall::O_NONBLOCK).unwrap();
+
+    if let Ok(winsize_fd) = syscall::dup(master, b"winsize") {
+        let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
+            ws_row: lines as u16,
+            ws_col: columns as u16
+        });
+        let _ = syscall::close(winsize_fd);
+    }
+
     let mut buf: [u8; 4096] = [0; 4096];
     let count = syscall::fpath(master, &mut buf).unwrap();
     (master, unsafe { String::from_utf8_unchecked(Vec::from(&buf[..count])) })

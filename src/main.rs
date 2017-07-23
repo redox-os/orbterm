@@ -9,6 +9,9 @@ extern crate orbfont;
 extern crate libc;
 
 #[cfg(target_os = "redox")]
+extern crate redox_termios;
+
+#[cfg(target_os = "redox")]
 extern crate syscall;
 
 use std::{cmp, env, io, str};
