@@ -1,7 +1,7 @@
 extern crate ransid;
 
 use std::{cmp, mem};
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::BTreeSet;
 use std::io::Result;
 
 use orbclient::{Color, EventOption, Renderer, Window, WindowFlag};
@@ -56,8 +56,6 @@ pub struct Console {
     pub mouse_left: bool,
     pub ctrl: bool,
     pub input: Vec<u8>,
-    pub end_of_input: bool,
-    pub cooked: VecDeque<u8>,
     pub requested: usize,
 }
 
@@ -85,8 +83,6 @@ impl Console {
             mouse_left: false,
             ctrl: false,
             input: Vec::new(),
-            end_of_input: false,
-            cooked: VecDeque::new(),
             requested: 0
         }
     }
@@ -147,37 +143,7 @@ impl Console {
                     }
                 }
 
-                if self.console.raw_mode {
-                    self.input.extend(buf);
-                } else {
-                    for &b in buf.iter() {
-                        match b {
-                            b'\x03' => {
-                                self.end_of_input = true;
-                                let _ = self.write(b"^C\n", true);
-                            },
-                            b'\x08' | b'\x7F' => {
-                                if let Some(_c) = self.cooked.pop_back() {
-                                    let _ = self.write(b"\x08", true);
-                                }
-                            },
-                            b'\x1B' => {
-                                let _ = self.write(b"^[", true);
-                            },
-                            b'\n' | b'\r' => {
-                                self.cooked.push_back(b);
-                                while let Some(c) = self.cooked.pop_front() {
-                                    self.input.push(c);
-                                }
-                                let _ = self.write(b"\n", true);
-                            },
-                            _ => {
-                                self.cooked.push_back(b);
-                                let _ = self.write(&[b], true);
-                            }
-                        }
-                    }
-                }
+                self.input.extend(buf);
             },
             EventOption::Mouse(mouse_event) => {
                 let x = (mouse_event.x/8) as u16 + 1;
