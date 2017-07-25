@@ -16,7 +16,7 @@ extern crate syscall;
 
 use std::{cmp, env, io, str};
 use std::io::Write;
-use std::os::unix::io::{FromRawFd, IntoRawFd};
+use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
@@ -48,9 +48,9 @@ fn main() {
     }
     unsafe {
         command
-        .stdin(Stdio::from_raw_fd(slave_stdin.into_raw_fd()))
-        .stdout(Stdio::from_raw_fd(slave_stdout.into_raw_fd()))
-        .stderr(Stdio::from_raw_fd(slave_stderr.into_raw_fd()))
+        .stdin(Stdio::from_raw_fd(slave_stdin.as_raw_fd()))
+        .stdout(Stdio::from_raw_fd(slave_stdout.as_raw_fd()))
+        .stderr(Stdio::from_raw_fd(slave_stderr.as_raw_fd()))
         .env("COLUMNS", format!("{}", columns))
         .env("LINES", format!("{}", lines))
         .env("TERM", "xterm-256color")
@@ -62,6 +62,10 @@ fn main() {
 
     match command.spawn() {
         Ok(mut process) => {
+            drop(slave_stderr);
+            drop(slave_stdout);
+            drop(slave_stdin);
+
             let mut console = Console::new(columns * 8, lines * 16);
             handle(&mut console, master_fd, &mut process);
         },

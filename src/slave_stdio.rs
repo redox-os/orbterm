@@ -4,7 +4,7 @@ use std::os::unix::io::FromRawFd;
 
 #[cfg(not(target_os="redox"))]
 pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
-    use libc::{self, O_RDONLY, O_WRONLY};
+    use libc::{self, O_CLOEXEC, O_RDONLY, O_WRONLY};
     use std::ffi::CString;
 
     let cvt = |res: i32| -> Result<i32> {
@@ -17,13 +17,13 @@ pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
 
     let tty_c = CString::new(tty_path).unwrap();
     let stdin = unsafe { File::from_raw_fd(
-        cvt(libc::open(tty_c.as_ptr(), O_RDONLY))?
+        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_RDONLY))?
     ) };
     let stdout = unsafe { File::from_raw_fd(
-        cvt(libc::open(tty_c.as_ptr(), O_WRONLY))?
+        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_WRONLY))?
     ) };
     let stderr = unsafe { File::from_raw_fd(
-        cvt(libc::open(tty_c.as_ptr(), O_WRONLY))?
+        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_WRONLY))?
     ) };
 
     Ok((stdin, stdout, stderr))
@@ -32,16 +32,16 @@ pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
 #[cfg(target_os="redox")]
 pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
     use syscall;
-    use syscall::flag::{O_RDONLY, O_WRONLY};
+    use syscall::flag::{O_CLOEXEC, O_RDONLY, O_WRONLY};
 
     let stdin = unsafe { File::from_raw_fd(
-        syscall::open(tty_path, O_RDONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
+        syscall::open(tty_path, O_CLOEXEC | O_RDONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
     ) };
     let stdout = unsafe { File::from_raw_fd(
-        syscall::open(tty_path, O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
+        syscall::open(tty_path, O_CLOEXEC | O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
     ) };
     let stderr = unsafe { File::from_raw_fd(
-        syscall::open(tty_path, O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
+        syscall::open(tty_path, O_CLOEXEC | O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
     ) };
 
     Ok((stdin, stdout, stderr))

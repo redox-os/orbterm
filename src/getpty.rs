@@ -18,7 +18,7 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
     let master_fd = OpenOptions::new()
         .read(true)
         .write(true)
-        .custom_flags(libc::O_NONBLOCK)
+        .custom_flags(libc::O_CLOEXEC | libc::O_NONBLOCK)
         .open("/dev/ptmx")
         .unwrap()
         .into_raw_fd();
@@ -52,7 +52,7 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
     use redox_termios;
     use syscall;
 
-    let master = syscall::open("pty:", syscall::O_RDWR | syscall::O_CREAT | syscall::O_NONBLOCK).unwrap();
+    let master = syscall::open("pty:", syscall::O_CLOEXEC | syscall::O_RDWR | syscall::O_CREAT | syscall::O_NONBLOCK).unwrap();
 
     if let Ok(winsize_fd) = syscall::dup(master, b"winsize") {
         let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
