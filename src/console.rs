@@ -246,10 +246,10 @@ impl Console {
         let height = self.window.height() as usize;
 
         let start_y = cmp::min(height - 1, y);
-        let end_y = cmp::min(height, y + h);
+        let end_y = cmp::min(height - 1, y + h);
 
         let start_x = cmp::min(width - 1, x);
-        let len = cmp::min(width, x + w) - start_x;
+        let len = cmp::min(width - 1, x + w) - start_x;
 
         let mut offscreen_ptr = self.window.data_mut().as_mut_ptr() as usize;
 
