@@ -106,8 +106,6 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
     use std::thread;
     use std::time::Duration;
 
-    console.console.raw_mode = true;
-
     let mut master = unsafe { File::from_raw_fd(master_fd) };
 
     'events: loop {

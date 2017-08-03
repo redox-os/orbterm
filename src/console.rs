@@ -400,7 +400,7 @@ impl Console {
             self.changed.insert(y as usize);
         }
 
-        if ! self.console.raw_mode && sync {
+        if sync {
             self.sync();
         }
 
