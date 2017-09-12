@@ -14,7 +14,7 @@ extern crate redox_termios;
 #[cfg(target_os = "redox")]
 extern crate syscall;
 
-use std::{cmp, env, io, str};
+use std::{cmp, env, io};
 use std::io::Write;
 use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::os::unix::process::CommandExt;
