@@ -1,6 +1,6 @@
 extern crate ransid;
 
-use std::{cmp, mem};
+use std::{cmp, mem, ptr};
 use std::collections::BTreeSet;
 use std::io::Result;
 
@@ -9,30 +9,6 @@ use orbfont::Font;
 
 static FONT: &'static [u8] = include_bytes!("../res/FiraMono-Regular.ttf");
 static FONT_BOLD: &'static [u8] = include_bytes!("../res/FiraMono-Bold.ttf");
-
-#[cfg(target_arch = "x86_64")]
-#[inline(always)]
-#[cold]
-pub unsafe fn fast_copy(dst: *mut u8, src: *const u8, len: usize) {
-    asm!("cld
-        rep movsb"
-        :
-        : "{rdi}"(dst as usize), "{rsi}"(src as usize), "{rcx}"(len)
-        : "cc", "memory", "rdi", "rsi", "rcx"
-        : "intel", "volatile");
-}
-
-#[cfg(target_arch = "x86_64")]
-#[inline(always)]
-#[cold]
-pub unsafe fn fast_set32(dst: *mut u32, src: u32, len: usize) {
-    asm!("cld
-        rep stosd"
-        :
-        : "{rdi}"(dst as usize), "{eax}"(src), "{rcx}"(len)
-        : "cc", "memory", "rdi", "rcx"
-        : "intel", "volatile");
-}
 
 #[derive(Clone, Copy)]
 pub struct Block {
@@ -356,34 +332,33 @@ impl Console {
                         }
                         *alt = alternate;
                     },
-                    ransid::Event::Scroll { rows, color } => {
-                        let pixel_rows = rows as u32 * 16;
+                    ransid::Event::Move {from_x, from_y, to_x, to_y, w, h } => {
+                        let width = window.width() as usize;
 
-                        let width = window.width();
-                        let height = window.height();
-                        if pixel_rows > 0 && pixel_rows < height {
-                            let off1 = pixel_rows * width;
-                            let off2 = height * width - off1;
-                            unsafe {
-                                let data_ptr = window.data_mut().as_mut_ptr() as *mut u32;
-                                fast_copy(data_ptr as *mut u8, data_ptr.offset(off1 as isize) as *const u8, off2 as usize * 4);
-                                fast_set32(data_ptr.offset(off2 as isize), color.data, off1 as usize);
-                            }
-                        }
+                        for y in 0..h {
+                            for pixel_y in 0..16 {
+                                {
+                                    let off_to = ((to_y + y) * 16 + pixel_y) * width + to_x * 8;
+                                    let off_from = ((from_y + y) * 16 + pixel_y) * width + from_x * 8;
 
-                        for y in 0..console_h {
-                            if y >= rows {
-                                for x in 0..console_w {
-                                    let mut block = grid[y * console_w + x];
-                                    grid[(y - rows) * console_w + x] = block;
-                                    if y >= console_h - rows {
-                                        block.c = '\0';
-                                        block.bg = console_bg.data;
-                                        grid[y * console_w + x] = block;
+                                    unsafe {
+                                        let data_ptr = window.data_mut().as_mut_ptr() as *mut u32;
+                                        ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), width);
                                     }
                                 }
                             }
-                            changed.insert(y as usize);
+
+                            {
+                                let off_to = to_y * console_w + to_x;
+                                let off_from = from_y * console_w + from_x;
+
+                                unsafe {
+                                    let data_ptr = grid.as_mut_ptr();
+                                    ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), console_w);
+                                }
+                            }
+
+                            changed.insert(to_y + y);
                         }
                     },
                     ransid::Event::Title { title } => {

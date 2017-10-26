@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 orbclient = "0.3"
 orbfont = "0.1"
-ransid = "0.2"
+ransid = "0.3"
 
 [target.'cfg(not(target_os = "redox"))'.dependencies]
 libc = "0.2"
