@@ -343,7 +343,7 @@ impl Console {
 
                                     unsafe {
                                         let data_ptr = window.data_mut().as_mut_ptr() as *mut u32;
-                                        ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), width);
+                                        ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), w * 8);
                                     }
                                 }
                             }
@@ -354,7 +354,7 @@ impl Console {
 
                                 unsafe {
                                     let data_ptr = grid.as_mut_ptr();
-                                    ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), console_w);
+                                    ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), w);
                                 }
                             }
 
