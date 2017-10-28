@@ -163,14 +163,14 @@ impl Console {
                 let h = resize_event.height as usize/16;
 
                 let mut grid = vec![Block {
-                    c: '\0', fg: self.console.foreground.data, bg: self.console.background.data, bold: false
+                    c: '\0', fg: self.console.foreground.as_rgb(), bg: self.console.background.as_rgb(), bold: false
                 }; w * h].into_boxed_slice();
 
                 let mut alt_grid = vec![Block {
-                    c: '\0', fg: self.console.foreground.data, bg: self.console.background.data, bold: false
+                    c: '\0', fg: self.console.foreground.as_rgb(), bg: self.console.background.as_rgb(), bold: false
                 }; w * h].into_boxed_slice();
 
-                self.window.set(Color { data: self.console.background.data });
+                self.window.set(Color { data: self.console.background.as_rgb() });
 
                 {
                     let font = &self.font;
@@ -276,14 +276,14 @@ impl Console {
                 match event {
                     ransid::Event::Char { x, y, c, color, bold, .. } => {
                         if bold {
-                            font_bold.render(&c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: color.data });
+                            font_bold.render(&c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: color.as_rgb() });
                         } else {
-                            font.render(&c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: color.data });
+                            font.render(&c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: color.as_rgb() });
                         }
                         {
                             let block = &mut grid[y * console_w + x];
                             block.c = c;
-                            block.fg = color.data;
+                            block.fg = color.as_rgb();
                             block.bold = bold;
                         }
                         changed.insert(y);
@@ -292,13 +292,13 @@ impl Console {
                         input.extend(data);
                     },
                     ransid::Event::Rect { x, y, w, h, color } => {
-                        window.rect(x as i32 * 8, y as i32 * 16, w as u32 * 8, h as u32 * 16, Color { data: color.data });
+                        window.rect(x as i32 * 8, y as i32 * 16, w as u32 * 8, h as u32 * 16, Color { data: color.as_rgb() });
 
                         for y2 in y..y + h {
                             for x2 in x..x + w {
                                 let block = &mut grid[y2 * console_w + x2];
                                 block.c = '\0';
-                                block.bg = color.data;
+                                block.bg = color.as_rgb();
                             }
                             changed.insert(y2);
                         }
@@ -307,7 +307,7 @@ impl Console {
                         if *alt != alternate {
                             mem::swap(grid, alt_grid);
 
-                            window.set(Color { data: console_bg.data });
+                            window.set(Color { data: console_bg.as_rgb() });
 
                             for y in 0..console_h {
                                 for x in 0..console_w {
@@ -315,7 +315,7 @@ impl Console {
 
                                     if clear {
                                         block.c = '\0';
-                                        block.bg = console_bg.data;
+                                        block.bg = console_bg.as_rgb();
                                     }
 
                                     window.rect(x as i32 * 8, y as i32 * 16, 8, 16, Color { data: block.bg });
