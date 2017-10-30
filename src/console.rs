@@ -335,11 +335,17 @@ impl Console {
                     ransid::Event::Move {from_x, from_y, to_x, to_y, w, h } => {
                         let width = window.width() as usize;
 
-                        for y in 0..h {
+                        for raw_y in 0..h {
+                            let y = if from_y > to_y {
+                                raw_y
+                            } else {
+                                h - raw_y - 1
+                            };
+
                             for pixel_y in 0..16 {
                                 {
-                                    let off_to = ((to_y + y) * 16 + pixel_y) * width + to_x * 8;
                                     let off_from = ((from_y + y) * 16 + pixel_y) * width + from_x * 8;
+                                    let off_to = ((to_y + y) * 16 + pixel_y) * width + to_x * 8;
 
                                     unsafe {
                                         let data_ptr = window.data_mut().as_mut_ptr() as *mut u32;
@@ -349,8 +355,8 @@ impl Console {
                             }
 
                             {
-                                let off_to = to_y * console_w + to_x;
                                 let off_from = from_y * console_w + from_x;
+                                let off_to = to_y * console_w + to_x;
 
                                 unsafe {
                                     let data_ptr = grid.as_mut_ptr();
