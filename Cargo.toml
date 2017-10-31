@@ -2,7 +2,7 @@
 name = "orbterm"
 description = "The Orbital Terminal"
 repository = "https://github.com/redox-os/orbterm"
-version = "0.2.3"
+version = "0.2.4"
 license = "MIT"
 readme = "README.md"
 authors = ["Jeremy Soller <jackpot51@gmail.com>"]
