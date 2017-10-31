@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 orbclient = "0.3"
 orbfont = "0.1"
-ransid = "0.3"
+ransid = { git="https://github.com/redox-os/ransid.git" }
 
 [target.'cfg(not(target_os = "redox"))'.dependencies]
 libc = "0.2"
