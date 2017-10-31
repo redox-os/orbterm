@@ -104,12 +104,12 @@ dependencies = [
 
 [[package]]
 name = "orbterm"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "libc 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "orbclient 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "orbfont 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "ransid 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ransid 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "redox_termios 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -125,7 +125,7 @@ dependencies = [
 
 [[package]]
 name = "ransid"
-version = "0.3.1"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -197,7 +197,7 @@ dependencies = [
 "checksum orbclient 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)" = "6e5d8d9900998fb4b9394e27058aa22a6d3509fb67dd860f74ba0507d4406943"
 "checksum orbfont 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "da4dfbc851e5c24c3cf1e16ec5222f868f3362d2b7493d0b53051fe2669267a2"
 "checksum rand 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)" = "61efcbcd9fa8d8fbb07c84e34a8af18a1ff177b449689ad38a6e9457ecc7b2ae"
-"checksum ransid 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5d4952fef22a408e024868035306b72fef63d347028c1dbf7491bcf915052ecd"
+"checksum ransid 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "55c76b972e612f824dd9cbd7dfe16f47ae6273303c33e5524fe8350c2d9a9da6"
 "checksum redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)" = "8dde11f18c108289bef24469638a04dce49da56084f2d50618b226e47eb04509"
 "checksum redox_termios 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7e891cfe48e9100a70a3b6eb652fef28920c117d366339687bd5576160db0f76"
 "checksum rusttype 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "30047cc747a78ae042bf2cd65c79f83c3485d90107535b532d6e8f60e2c89cb1"

@@ -280,12 +280,13 @@ impl Console {
                         } else {
                             font.render(&c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: color.as_rgb() });
                         }
-                        {
-                            let block = &mut grid[y * console_w + x];
+
+                        if let Some(ref mut block) = grid.get_mut(y * console_w + x) {
                             block.c = c;
                             block.fg = color.as_rgb();
                             block.bold = bold;
                         }
+
                         changed.insert(y);
                     },
                     ransid::Event::Input { data } => {
@@ -296,9 +297,10 @@ impl Console {
 
                         for y2 in y..y + h {
                             for x2 in x..x + w {
-                                let block = &mut grid[y2 * console_w + x2];
-                                block.c = '\0';
-                                block.bg = color.as_rgb();
+                                if let Some(ref mut block) = grid.get_mut(y2 * console_w + x2) {
+                                    block.c = '\0';
+                                    block.bg = color.as_rgb();
+                                }
                             }
                             changed.insert(y2);
                         }
@@ -334,6 +336,7 @@ impl Console {
                     },
                     ransid::Event::Move {from_x, from_y, to_x, to_y, w, h } => {
                         let width = window.width() as usize;
+                        let pixels = window.data_mut();
 
                         for raw_y in 0..h {
                             let y = if from_y > to_y {
@@ -346,10 +349,13 @@ impl Console {
                                 {
                                     let off_from = ((from_y + y) * 16 + pixel_y) * width + from_x * 8;
                                     let off_to = ((to_y + y) * 16 + pixel_y) * width + to_x * 8;
+                                    let len = w * 8;
 
-                                    unsafe {
-                                        let data_ptr = window.data_mut().as_mut_ptr() as *mut u32;
-                                        ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), w * 8);
+                                    if off_from + len <= pixels.len() && off_to + len <= pixels.len() {
+                                        unsafe {
+                                            let data_ptr = pixels.as_mut_ptr() as *mut u32;
+                                            ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), len);
+                                        }
                                     }
                                 }
                             }
@@ -357,10 +363,13 @@ impl Console {
                             {
                                 let off_from = from_y * console_w + from_x;
                                 let off_to = to_y * console_w + to_x;
+                                let len = w;
 
-                                unsafe {
-                                    let data_ptr = grid.as_mut_ptr();
-                                    ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), w);
+                                if off_from + len <= grid.len() && off_to + len <= grid.len() {
+                                    unsafe {
+                                        let data_ptr = grid.as_mut_ptr();
+                                        ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), len);
+                                    }
                                 }
                             }
 
