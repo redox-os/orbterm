@@ -33,8 +33,8 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                     EventOption::Resize(_) => {
                         if let Ok(winsize_fd) = syscall::dup(master_fd, b"winsize") {
                             let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
-                                ws_row: console.console.h as u16,
-                                ws_col: console.console.w as u16
+                                ws_row: console.console.state.h as u16,
+                                ws_col: console.console.state.w as u16
                             });
                             let _ = syscall::close(winsize_fd);
                         }
@@ -118,8 +118,8 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                 EventOption::Quit(_) => break 'events,
                 EventOption::Resize(_) => unsafe {
                     let size = libc::winsize {
-                        ws_row: console.console.h as libc::c_ushort,
-                        ws_col: console.console.w as libc::c_ushort,
+                        ws_row: console.console.state.h as libc::c_ushort,
+                        ws_col: console.console.state.w as libc::c_ushort,
                         ws_xpixel: 0,
                         ws_ypixel: 0
                     };

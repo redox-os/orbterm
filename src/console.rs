@@ -43,7 +43,7 @@ impl Console {
         let ransid = ransid::Console::new(width as usize / 8, height as usize / 16);
         let grid = vec![Block {
             c: '\0', fg: 0, bg: 0, bold: false
-        }; ransid.w * ransid.h].into_boxed_slice();
+        }; ransid.state.w * ransid.state.h].into_boxed_slice();
 
         Console {
             console: ransid,
@@ -125,7 +125,7 @@ impl Console {
             EventOption::Mouse(mouse_event) => {
                 let x = (mouse_event.x/8) as u16 + 1;
                 let y = (mouse_event.y/16) as u16 + 1;
-                if self.console.mouse_rxvt && self.console.mouse_btn {
+                if self.console.state.mouse_rxvt && self.console.state.mouse_btn {
                     if self.mouse_left && (x != self.mouse_x || y != self.mouse_y) {
                         let string = format!("\x1B[<{};{};{}M", 32, self.mouse_x, self.mouse_y);
                         self.input.extend(string.as_bytes());
@@ -135,7 +135,7 @@ impl Console {
                 self.mouse_y = y;
             },
             EventOption::Button(button_event) => {
-                if self.console.mouse_rxvt {
+                if self.console.state.mouse_rxvt {
                     if button_event.left {
                         if ! self.mouse_left {
                             let string = format!("\x1B[<{};{};{}M", 0, self.mouse_x, self.mouse_y);
@@ -149,7 +149,7 @@ impl Console {
                 }
             },
             EventOption::Scroll(scroll_event) => {
-                if self.console.mouse_rxvt {
+                if self.console.state.mouse_rxvt {
                     if scroll_event.y > 0 {
                         let string = format!("\x1B[<{};{};{}M", 64, self.mouse_x, self.mouse_y);
                         self.input.extend(string.as_bytes());
@@ -164,27 +164,27 @@ impl Console {
                 let h = resize_event.height as usize/16;
 
                 let mut grid = vec![Block {
-                    c: '\0', fg: self.console.foreground.as_rgb(), bg: self.console.background.as_rgb(), bold: false
+                    c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
                 }; w * h].into_boxed_slice();
 
                 let mut alt_grid = vec![Block {
-                    c: '\0', fg: self.console.foreground.as_rgb(), bg: self.console.background.as_rgb(), bold: false
+                    c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
                 }; w * h].into_boxed_slice();
 
-                self.window.set(Color { data: self.console.background.as_rgb() });
+                self.window.set(Color { data: self.console.state.background.as_rgb() });
 
                 {
                     let font = &self.font;
                     let font_bold = &self.font_bold;
                     let window = &mut self.window;
                     let mut str_buf = [0; 4];
-                    for y in 0..self.console.h {
-                        for x in 0..self.console.w {
-                            let block = self.grid[y * self.console.w + x];
+                    for y in 0..self.console.state.h {
+                        for x in 0..self.console.state.w {
+                            let block = self.grid[y * self.console.state.w + x];
                             if y < h && x < w {
                                 grid[y * w + x] = block;
 
-                                let alt_block = self.alt_grid[y * self.console.w + x];
+                                let alt_block = self.alt_grid[y * self.console.state.w + x];
                                 alt_grid[y * w + x] = alt_block;
                             }
 
@@ -201,14 +201,14 @@ impl Console {
                     }
                 }
 
-                self.console.w = w;
-                self.console.h = h;
+                self.console.state.w = w;
+                self.console.state.h = h;
                 self.grid = grid;
                 self.alt_grid = alt_grid;
 
-                if self.console.cursor && self.console.x < self.console.w && self.console.y < self.console.h {
-                    let x = self.console.x;
-                    let y = self.console.y;
+                if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
+                    let x = self.console.state.x;
+                    let y = self.console.state.y;
                     self.invert(x * 8, y * 16, 8, 16);
                 }
 
@@ -253,9 +253,9 @@ impl Console {
     }
 
     pub fn write(&mut self, buf: &[u8], sync: bool) -> Result<usize> {
-        if self.console.cursor && self.console.x < self.console.w && self.console.y < self.console.h {
-            let x = self.console.x;
-            let y = self.console.y;
+        if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
+            let x = self.console.state.x;
+            let y = self.console.state.y;
             self.invert(x * 8, y * 16, 8, 16);
             self.changed.insert(y);
         }
@@ -263,9 +263,9 @@ impl Console {
         {
             let font = &self.font;
             let font_bold = &self.font_bold;
-            let console_bg = self.console.background;
-            let console_w = self.console.w;
-            let console_h = self.console.h;
+            let console_bg = self.console.state.background;
+            let console_w = self.console.state.w;
+            let console_h = self.console.state.h;
             let alt = &mut self.alternate;
             let grid = &mut self.grid;
             let alt_grid = &mut self.alt_grid;
@@ -336,6 +336,8 @@ impl Console {
                         *alt = alternate;
                     },
                     ransid::Event::Move {from_x, from_y, to_x, to_y, w, h } => {
+                        println!("Move {}, {} to {}, {} size {}, {}", from_x, from_y, to_x, to_y, w, h);
+
                         let width = window.width() as usize;
                         let pixels = window.data_mut();
 
@@ -362,8 +364,8 @@ impl Console {
                             }
 
                             {
-                                let off_from = from_y * console_w + from_x;
-                                let off_to = to_y * console_w + to_x;
+                                let off_from = (from_y + y) * console_w + from_x;
+                                let off_to = (to_y + y) * console_w + to_x;
                                 let len = w;
 
                                 if off_from + len <= grid.len() && off_to + len <= grid.len() {
@@ -384,9 +386,9 @@ impl Console {
             });
         }
 
-        if self.console.cursor && self.console.x < self.console.w && self.console.y < self.console.h {
-            let x = self.console.x;
-            let y = self.console.y;
+        if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
+            let x = self.console.state.x;
+            let y = self.console.state.y;
             self.invert(x * 8, y * 16, 8, 16);
             self.changed.insert(y as usize);
         }
