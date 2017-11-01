@@ -126,7 +126,7 @@ dependencies = [
 [[package]]
 name = "ransid"
 version = "0.3.8"
-source = "git+https://github.com/redox-os/ransid.git#39579630a023e914957e7e8d32ca61e2d134f1ca"
+source = "git+https://github.com/redox-os/ransid.git#f25f9a24fad345e7b4e8c2af0a893330b77a5777"
 dependencies = [
  "vte 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

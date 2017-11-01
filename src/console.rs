@@ -379,6 +379,10 @@ impl Console {
                             changed.insert(to_y + y);
                         }
                     },
+                    ransid::Event::Resize { w, h } => {
+                        //TODO: Make sure grid is resized
+                        window.set_size(w as u32 * 8, h as u32 * 16);
+                    },
                     ransid::Event::Title { title } => {
                         window.set_title(&title);
                     }
