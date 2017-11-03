@@ -2,7 +2,7 @@
 name = "orbterm"
 description = "The Orbital Terminal"
 repository = "https://github.com/redox-os/orbterm"
-version = "0.2.4"
+version = "0.3.0"
 license = "MIT"
 readme = "README.md"
 authors = ["Jeremy Soller <jackpot51@gmail.com>"]
@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 orbclient = "0.3"
 orbfont = "0.1"
-ransid = { git="https://github.com/redox-os/ransid.git" }
+ransid = "0.4"
 
 [target.'cfg(not(target_os = "redox"))'.dependencies]
 libc = "0.2"
