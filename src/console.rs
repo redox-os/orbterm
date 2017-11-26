@@ -336,8 +336,6 @@ impl Console {
                         *alt = alternate;
                     },
                     ransid::Event::Move {from_x, from_y, to_x, to_y, w, h } => {
-                        println!("Move {}, {} to {}, {} size {}, {}", from_x, from_y, to_x, to_y, w, h);
-
                         let width = window.width() as usize;
                         let pixels = window.data_mut();
 
