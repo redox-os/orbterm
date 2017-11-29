@@ -163,53 +163,54 @@ impl Console {
                 let w = resize_event.width as usize/8;
                 let h = resize_event.height as usize/16;
 
-                let mut grid = vec![Block {
-                    c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
-                }; w * h].into_boxed_slice();
+                if w != self.console.state.w || h != self.console.state.h {
+                    let mut grid = vec![Block {
+                        c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
+                    }; w * h].into_boxed_slice();
 
-                let mut alt_grid = vec![Block {
-                    c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
-                }; w * h].into_boxed_slice();
+                    let mut alt_grid = vec![Block {
+                        c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
+                    }; w * h].into_boxed_slice();
 
-                self.window.set(Color { data: self.console.state.background.as_rgb() });
+                    self.window.set(Color { data: self.console.state.background.as_rgb() });
 
-                {
-                    let font = &self.font;
-                    let font_bold = &self.font_bold;
-                    let window = &mut self.window;
-                    let mut str_buf = [0; 4];
-                    for y in 0..self.console.state.h {
-                        for x in 0..self.console.state.w {
-                            let block = self.grid[y * self.console.state.w + x];
-                            if y < h && x < w {
-                                grid[y * w + x] = block;
+                    {
+                        let font = &self.font;
+                        let font_bold = &self.font_bold;
+                        let window = &mut self.window;
+                        let mut str_buf = [0; 4];
+                        for y in 0..self.console.state.h {
+                            for x in 0..self.console.state.w {
+                                let block = self.grid[y * self.console.state.w + x];
+                                if y < h && x < w {
+                                    grid[y * w + x] = block;
 
-                                let alt_block = self.alt_grid[y * self.console.state.w + x];
-                                alt_grid[y * w + x] = alt_block;
-                            }
+                                    let alt_block = self.alt_grid[y * self.console.state.w + x];
+                                    alt_grid[y * w + x] = alt_block;
+                                }
 
-                            window.rect(x as i32 * 8, y as i32 * 16, 8, 16, Color { data: block.bg });
-                            if block.c != '\0' {
-                                if block.bold {
-                                    font_bold.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
-                                } else {
-                                    font.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
+                                window.rect(x as i32 * 8, y as i32 * 16, 8, 16, Color { data: block.bg });
+                                if block.c != '\0' {
+                                    if block.bold {
+                                        font_bold.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
+                                    } else {
+                                        font.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
+                                    }
                                 }
                             }
+                            self.changed.insert(y as usize);
                         }
-                        self.changed.insert(y as usize);
                     }
-                }
 
-                self.console.state.w = w;
-                self.console.state.h = h;
-                self.grid = grid;
-                self.alt_grid = alt_grid;
+                    self.console.resize(w, h);
+                    self.grid = grid;
+                    self.alt_grid = alt_grid;
 
-                if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
-                    let x = self.console.state.x;
-                    let y = self.console.state.y;
-                    self.invert(x * 8, y * 16, 8, 16);
+                    if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
+                        let x = self.console.state.x;
+                        let y = self.console.state.y;
+                        self.invert(x * 8, y * 16, 8, 16);
+                    }
                 }
 
                 self.sync();
