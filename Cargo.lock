@@ -104,7 +104,7 @@ dependencies = [
 
 [[package]]
 name = "orbterm"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "libc 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "orbclient 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)",
