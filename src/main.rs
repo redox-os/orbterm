@@ -33,7 +33,7 @@ mod handle;
 mod slave_stdio;
 
 const BLOCK_WIDTH: usize = 8;
-const BLOCK_HEIGHT: usize = 16;
+const BLOCK_HEIGHT: usize = BLOCK_WIDTH * 2;
 
 fn main() {
     let mut args = env::args().skip(1);
