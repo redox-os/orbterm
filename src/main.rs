@@ -32,12 +32,15 @@ mod getpty;
 mod handle;
 mod slave_stdio;
 
+const BLOCK_WIDTH: usize = 8;
+const BLOCK_HEIGHT: usize = 16;
+
 fn main() {
     let mut args = env::args().skip(1);
     let shell = args.next().unwrap_or(env::var("SHELL").unwrap_or("sh".to_string()));
 
     let (display_width, display_height) = orbclient::get_display_size().expect("terminal: failed to get display size");
-    let (columns, lines) = (cmp::min(1024, display_width * 4/5) / 8, cmp::min(768, display_height * 4/5) / 16);
+    let (columns, lines) = (cmp::min(1024, display_width * 4/5) / BLOCK_WIDTH as u32, cmp::min(768, display_height * 4/5) / BLOCK_HEIGHT as u32);
 
     let (master_fd, tty_path) = getpty(columns, lines);
     let (slave_stdin, slave_stdout, slave_stderr) = slave_stdio(&tty_path).expect("terminal: failed to get slave stdio");
@@ -66,7 +69,7 @@ fn main() {
             drop(slave_stdout);
             drop(slave_stdin);
 
-            let mut console = Console::new(columns * 8, lines * 16);
+            let mut console = Console::new(columns * BLOCK_WIDTH as u32, lines * BLOCK_HEIGHT as u32, BLOCK_WIDTH, BLOCK_HEIGHT);
             handle(&mut console, master_fd, &mut process);
         },
         Err(err) => {

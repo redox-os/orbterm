@@ -33,14 +33,16 @@ pub struct Console {
     pub ctrl: bool,
     pub input: Vec<u8>,
     pub requested: usize,
+    pub block_width: usize,
+    pub block_height: usize,
 }
 
 impl Console {
-    pub fn new(width: u32, height: u32) -> Console {
+    pub fn new(width: u32, height: u32, block_width: usize, block_height: usize) -> Console {
         let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[WindowFlag::Async, WindowFlag::Resizable]).unwrap();
         window.sync();
 
-        let ransid = ransid::Console::new(width as usize / 8, height as usize / 16);
+        let ransid = ransid::Console::new(width as usize / block_width, height as usize / block_height);
         let grid = vec![Block {
             c: '\0', fg: 0, bg: 0, bold: false
         }; ransid.state.w * ransid.state.h].into_boxed_slice();
@@ -59,7 +61,9 @@ impl Console {
             mouse_left: false,
             ctrl: false,
             input: Vec::new(),
-            requested: 0
+            requested: 0,
+            block_width,
+            block_height,
         }
     }
 
@@ -123,8 +127,8 @@ impl Console {
                 self.input.extend(buf);
             },
             EventOption::Mouse(mouse_event) => {
-                let x = (mouse_event.x/8) as u16 + 1;
-                let y = (mouse_event.y/16) as u16 + 1;
+                let x = (mouse_event.x / self.block_width as i32) as u16 + 1;
+                let y = (mouse_event.y / self.block_height as i32) as u16 + 1;
                 if self.console.state.mouse_rxvt && self.console.state.mouse_btn {
                     if self.mouse_left && (x != self.mouse_x || y != self.mouse_y) {
                         let string = format!("\x1B[<{};{};{}M", 32, self.mouse_x, self.mouse_y);
@@ -160,8 +164,8 @@ impl Console {
                 }
             },
             EventOption::Resize(resize_event) => {
-                let w = resize_event.width as usize/8;
-                let h = resize_event.height as usize/16;
+                let w = resize_event.width as usize / self.block_width;
+                let h = resize_event.height as usize / self.block_height;
 
                 if w != self.console.state.w || h != self.console.state.h {
                     let mut grid = vec![Block {
@@ -189,12 +193,12 @@ impl Console {
                                     alt_grid[y * w + x] = alt_block;
                                 }
 
-                                window.rect(x as i32 * 8, y as i32 * 16, 8, 16, Color { data: block.bg });
+                                window.rect(x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, self.block_width as u32, self.block_height as u32, Color { data: block.bg });
                                 if block.c != '\0' {
                                     if block.bold {
-                                        font_bold.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
+                                        font_bold.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
                                     } else {
-                                        font.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
+                                        font.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
                                     }
                                 }
                             }
@@ -209,7 +213,9 @@ impl Console {
                     if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
                         let x = self.console.state.x;
                         let y = self.console.state.y;
-                        self.invert(x * 8, y * 16, 8, 16);
+                        let block_width = self.block_width;
+                        let block_height = self.block_height;
+                        self.invert(x * block_width, y * block_height, block_width, block_height);
                     }
                 }
 
@@ -257,7 +263,9 @@ impl Console {
         if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
             let x = self.console.state.x;
             let y = self.console.state.y;
-            self.invert(x * 8, y * 16, 8, 16);
+            let block_width = self.block_width;
+            let block_height = self.block_height;
+            self.invert(x * block_width, y * block_height, block_width, block_height);
             self.changed.insert(y);
         }
 
@@ -267,6 +275,8 @@ impl Console {
             let console_bg = self.console.state.background;
             let console_w = self.console.state.w;
             let console_h = self.console.state.h;
+            let block_width = self.block_width;
+            let block_height = self.block_height;
             let alt = &mut self.alternate;
             let grid = &mut self.grid;
             let alt_grid = &mut self.alt_grid;
@@ -278,9 +288,9 @@ impl Console {
                 match event {
                     ransid::Event::Char { x, y, c, color, bold, .. } => {
                         if bold {
-                            font_bold.render(&c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: color.as_rgb() });
+                            font_bold.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: color.as_rgb() });
                         } else {
-                            font.render(&c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: color.as_rgb() });
+                            font.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: color.as_rgb() });
                         }
 
                         if let Some(ref mut block) = grid.get_mut(y * console_w + x) {
@@ -295,7 +305,7 @@ impl Console {
                         input.extend(data);
                     },
                     ransid::Event::Rect { x, y, w, h, color } => {
-                        window.rect(x as i32 * 8, y as i32 * 16, w as u32 * 8, h as u32 * 16, Color { data: color.as_rgb() });
+                        window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, w as u32 * block_width as u32, h as u32 * block_height as u32, Color { data: color.as_rgb() });
 
                         for y2 in y..y + h {
                             for x2 in x..x + w {
@@ -322,12 +332,12 @@ impl Console {
                                         block.bg = console_bg.as_rgb();
                                     }
 
-                                    window.rect(x as i32 * 8, y as i32 * 16, 8, 16, Color { data: block.bg });
+                                    window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, block_width as u32, block_height as u32, Color { data: block.bg });
                                     if block.c != '\0' {
                                         if block.bold {
-                                            font_bold.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
+                                            font_bold.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: block.fg });
                                         } else {
-                                            font.render(&block.c.encode_utf8(&mut str_buf), 16.0).draw(window, x as i32 * 8, y as i32 * 16, Color { data: block.fg });
+                                            font.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: block.fg });
                                         }
                                     }
                                 }
@@ -347,11 +357,11 @@ impl Console {
                                 h - raw_y - 1
                             };
 
-                            for pixel_y in 0..16 {
+                            for pixel_y in 0..block_height {
                                 {
-                                    let off_from = ((from_y + y) * 16 + pixel_y) * width + from_x * 8;
-                                    let off_to = ((to_y + y) * 16 + pixel_y) * width + to_x * 8;
-                                    let len = w * 8;
+                                    let off_from = ((from_y + y) * block_height + pixel_y) * width + from_x * block_width;
+                                    let off_to = ((to_y + y) * block_height + pixel_y) * width + to_x * block_width;
+                                    let len = w * block_width;
 
                                     if off_from + len <= pixels.len() && off_to + len <= pixels.len() {
                                         unsafe {
@@ -380,7 +390,7 @@ impl Console {
                     },
                     ransid::Event::Resize { w, h } => {
                         //TODO: Make sure grid is resized
-                        window.set_size(w as u32 * 8, h as u32 * 16);
+                        window.set_size(w as u32 * block_width as u32, h as u32 * block_height as u32);
                     },
                     ransid::Event::Title { title } => {
                         window.set_title(&title);
@@ -392,7 +402,9 @@ impl Console {
         if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
             let x = self.console.state.x;
             let y = self.console.state.y;
-            self.invert(x * 8, y * 16, 8, 16);
+            let block_width = self.block_width;
+            let block_height = self.block_height;
+            self.invert(x * block_width, y * block_height, block_width, block_height);
             self.changed.insert(y as usize);
         }
 
