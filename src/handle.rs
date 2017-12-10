@@ -26,20 +26,23 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
             for event in console.window.events() {
                 let event_option = event.to_option();
 
+                let console_w = console.console.state.w;
+                let console_h = console.console.state.h;
+
                 console.input(event_option);
 
-                match event_option {
-                    EventOption::Quit(_) => return false,
-                    EventOption::Resize(_) => {
-                        if let Ok(winsize_fd) = syscall::dup(master_fd, b"winsize") {
-                            let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
-                                ws_row: console.console.state.h as u16,
-                                ws_col: console.console.state.w as u16
-                            });
-                            let _ = syscall::close(winsize_fd);
-                        }
-                    },
-                    _ => ()
+                if let EventOption::Quit(_) = event_option {
+                    return false;
+                }
+
+                if console_w != console.console.state.w || console_h != console.console.state.h {
+                    if let Ok(winsize_fd) = syscall::dup(master_fd, b"winsize") {
+                        let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
+                            ws_row: console.console.state.h as u16,
+                            ws_col: console.console.state.w as u16
+                        });
+                        let _ = syscall::close(winsize_fd);
+                    }
                 }
             }
         } else if event_id == master_fd {
@@ -112,11 +115,17 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
         for event in console.window.events() {
             let event_option = event.to_option();
 
+            let console_w = console.console.state.w;
+            let console_h = console.console.state.h;
+
             console.input(event_option);
 
-            match event_option {
-                EventOption::Quit(_) => break 'events,
-                EventOption::Resize(_) => unsafe {
+            if let EventOption::Quit(_) = event_option {
+                break 'events;
+            }
+
+            if console_w != console.console.state.w || console_h != console.console.state.h {
+                unsafe {
                     let size = libc::winsize {
                         ws_row: console.console.state.h as libc::c_ushort,
                         ws_col: console.console.state.w as libc::c_ushort,
@@ -126,8 +135,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                     if libc::ioctl(master_fd, libc::TIOCSWINSZ, &size as *const libc::winsize) < 0 {
                         panic!("ioctl: {:?}", io::Error::last_os_error());
                     }
-                },
-                _ => ()
+                }
             }
         }
 
