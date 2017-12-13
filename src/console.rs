@@ -76,6 +76,26 @@ impl Console {
                     self.ctrl = key_event.pressed;
                 } else if key_event.pressed {
                     match key_event.scancode {
+                        0x4A if self.ctrl => { // Ctrl-Minus
+                            let new_block_width = self.block_width - 1;
+                            self.set_block_size(new_block_width);
+
+                            let w = self.window.width() as usize / self.block_width;
+                            let h = self.window.height() as usize / self.block_height;
+
+                            self.resize_grid(w, h);
+                            self.sync();
+                        },
+                        0x4E if self.ctrl => { // Ctrl-Plus
+                            let new_block_width = self.block_width + 1;
+                            self.set_block_size(new_block_width);
+
+                            let w = self.window.width() as usize / self.block_width;
+                            let h = self.window.height() as usize / self.block_height;
+
+                            self.resize_grid(w, h);
+                            self.sync();
+                        },
                         0x0E => { // Backspace
                             buf.extend_from_slice(b"\x7F");
                         },
@@ -153,7 +173,16 @@ impl Console {
                 }
             },
             EventOption::Scroll(scroll_event) => {
-                if self.console.state.mouse_rxvt {
+                if self.ctrl {
+                    let new_block_width = (self.block_width as i32 + scroll_event.y.signum()) as usize;
+                    self.set_block_size(new_block_width);
+
+                    let w = self.window.width() as usize / self.block_width;
+                    let h = self.window.height() as usize / self.block_height;
+
+                    self.resize_grid(w, h);
+                    self.sync();
+                } else if self.console.state.mouse_rxvt {
                     if scroll_event.y > 0 {
                         let string = format!("\x1B[<{};{};{}M", 64, self.mouse_x, self.mouse_y);
                         self.input.extend(string.as_bytes());
@@ -166,59 +195,7 @@ impl Console {
             EventOption::Resize(resize_event) => {
                 let w = resize_event.width as usize / self.block_width;
                 let h = resize_event.height as usize / self.block_height;
-
-                if w != self.console.state.w || h != self.console.state.h {
-                    let mut grid = vec![Block {
-                        c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
-                    }; w * h].into_boxed_slice();
-
-                    let mut alt_grid = vec![Block {
-                        c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
-                    }; w * h].into_boxed_slice();
-
-                    self.window.set(Color { data: self.console.state.background.as_rgb() });
-
-                    {
-                        let font = &self.font;
-                        let font_bold = &self.font_bold;
-                        let window = &mut self.window;
-                        let mut str_buf = [0; 4];
-                        for y in 0..self.console.state.h {
-                            for x in 0..self.console.state.w {
-                                let block = self.grid[y * self.console.state.w + x];
-                                if y < h && x < w {
-                                    grid[y * w + x] = block;
-
-                                    let alt_block = self.alt_grid[y * self.console.state.w + x];
-                                    alt_grid[y * w + x] = alt_block;
-                                }
-
-                                window.rect(x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, self.block_width as u32, self.block_height as u32, Color { data: block.bg });
-                                if block.c != '\0' {
-                                    if block.bold {
-                                        font_bold.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
-                                    } else {
-                                        font.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
-                                    }
-                                }
-                            }
-                            self.changed.insert(y as usize);
-                        }
-                    }
-
-                    self.console.resize(w, h);
-                    self.grid = grid;
-                    self.alt_grid = alt_grid;
-
-                    if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
-                        let x = self.console.state.x;
-                        let y = self.console.state.y;
-                        let block_width = self.block_width;
-                        let block_height = self.block_height;
-                        self.invert(x * block_width, y * block_height, block_width, block_height);
-                    }
-                }
-
+                self.resize_grid(w, h);
                 self.sync();
             },
             _ => ()
@@ -413,6 +390,65 @@ impl Console {
         }
 
         Ok(buf.len())
+    }
+
+    fn resize_grid(&mut self, w: usize, h: usize) {
+        if w != self.console.state.w || h != self.console.state.h {
+            let mut grid = vec![Block {
+                c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
+            }; w * h].into_boxed_slice();
+
+            let mut alt_grid = vec![Block {
+                c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
+            }; w * h].into_boxed_slice();
+
+            self.window.set(Color { data: self.console.state.background.as_rgb() });
+
+            {
+                let font = &self.font;
+                let font_bold = &self.font_bold;
+                let window = &mut self.window;
+                let mut str_buf = [0; 4];
+                for y in 0..self.console.state.h {
+                    for x in 0..self.console.state.w {
+                        let block = self.grid[y * self.console.state.w + x];
+                        if y < h && x < w {
+                            grid[y * w + x] = block;
+
+                            let alt_block = self.alt_grid[y * self.console.state.w + x];
+                            alt_grid[y * w + x] = alt_block;
+                        }
+
+                        window.rect(x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, self.block_width as u32, self.block_height as u32, Color { data: block.bg });
+                        if block.c != '\0' {
+                            if block.bold {
+                                font_bold.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
+                            } else {
+                                font.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
+                            }
+                        }
+                    }
+                    self.changed.insert(y as usize);
+                }
+            }
+
+            self.console.resize(w, h);
+            self.grid = grid;
+            self.alt_grid = alt_grid;
+
+            if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
+                let x = self.console.state.x;
+                let y = self.console.state.y;
+                let block_width = self.block_width;
+                let block_height = self.block_height;
+                self.invert(x * block_width, y * block_height, block_width, block_height);
+            }
+        }
+    }
+
+    fn set_block_size(&mut self, block_width: usize) {
+        self.block_width = if block_width < 4 { 4 } else if block_width > 48 { 48 } else { block_width };
+        self.block_height = self.block_width * 2;
     }
 
     fn sync(&mut self) {
