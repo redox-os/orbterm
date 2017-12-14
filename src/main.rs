@@ -1,9 +1,14 @@
 #![deny(warnings)]
 #![feature(asm)]
+#![feature(catch_expr)]
 #![feature(const_fn)]
 
+#[macro_use] extern crate serde_derive;
+extern crate failure;
 extern crate orbclient;
 extern crate orbfont;
+extern crate toml;
+extern crate xdg;
 
 #[cfg(not(target_os = "redox"))]
 extern crate libc;
@@ -21,12 +26,15 @@ use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 
 use before_exec::before_exec;
+use config::Config;
 use console::Console;
 use getpty::getpty;
 use handle::handle;
 use slave_stdio::slave_stdio;
+use xdg::BaseDirectories;
 
 mod before_exec;
+mod config;
 mod console;
 mod getpty;
 mod handle;
@@ -36,6 +44,25 @@ const BLOCK_WIDTH: usize = 8;
 const BLOCK_HEIGHT: usize = BLOCK_WIDTH * 2;
 
 fn main() {
+    let result = do catch {
+        let xdg = BaseDirectories::with_prefix("orbterm")?;
+        if let Some(path) = xdg.find_config_file("config") {
+            Config::read(&path)
+        } else {
+            let path = xdg.place_config_file("config")?;
+            let config = Config::default();
+            config.write(&path)?;
+            Ok(config)
+        }
+    };
+    let config = match result {
+        Ok(config) => config,
+        Err(err) => {
+            eprintln!("orbterm: failed to open config: {}", err);
+            return;
+        }
+    };
+
     let mut args = env::args().skip(1);
     let shell = args.next().unwrap_or(env::var("SHELL").unwrap_or("sh".to_string()));
 
@@ -71,7 +98,8 @@ fn main() {
             drop(slave_stdout);
             drop(slave_stdin);
 
-            let mut console = Console::new(columns * BLOCK_WIDTH as u32, lines * BLOCK_HEIGHT as u32, BLOCK_WIDTH, BLOCK_HEIGHT);
+            let mut console = Console::new(&config, columns * BLOCK_WIDTH as u32, lines * BLOCK_HEIGHT as u32,
+                                           BLOCK_WIDTH, BLOCK_HEIGHT);
             handle(&mut console, master_fd, &mut process);
         },
         Err(err) => {

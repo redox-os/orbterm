@@ -4,11 +4,12 @@ use std::{cmp, mem, ptr};
 use std::collections::BTreeSet;
 use std::io::Result;
 
+use config::Config;
 use orbclient::{Color, EventOption, Renderer, Window, WindowFlag};
 use orbfont::Font;
 
-static FONT: &'static [u8] = include_bytes!("../res/FiraMono-Regular.ttf");
-static FONT_BOLD: &'static [u8] = include_bytes!("../res/FiraMono-Bold.ttf");
+static DEFAULT_FONT: &'static [u8] = include_bytes!("../res/FiraMono-Regular.ttf");
+static DEFAULT_FONT_BOLD: &'static [u8] = include_bytes!("../res/FiraMono-Bold.ttf");
 
 #[derive(Clone, Copy)]
 pub struct Block {
@@ -38,8 +39,9 @@ pub struct Console {
 }
 
 impl Console {
-    pub fn new(width: u32, height: u32, block_width: usize, block_height: usize) -> Console {
-        let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[WindowFlag::Async, WindowFlag::Resizable]).unwrap();
+    pub fn new(config: &Config, width: u32, height: u32, block_width: usize, block_height: usize) -> Console {
+        let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[WindowFlag::Async, WindowFlag::Resizable])
+                            .unwrap();
         window.sync();
 
         let ransid = ransid::Console::new(width as usize / block_width, height as usize / block_height);
@@ -47,14 +49,17 @@ impl Console {
             c: '\0', fg: 0, bg: 0, bold: false
         }; ransid.state.w * ransid.state.h].into_boxed_slice();
 
+        let font = Font::from_path(&config.font).unwrap_or_else(|_| Font::from_data(DEFAULT_FONT).unwrap());
+        let font_bold = Font::from_path(&config.font_bold).unwrap_or_else(|_| Font::from_data(DEFAULT_FONT_BOLD).unwrap());
+
         Console {
             console: ransid,
             alternate: false,
             grid: grid.clone(),
             alt_grid: grid,
             window: window,
-            font: Font::from_data(FONT).unwrap(),
-            font_bold: Font::from_data(FONT_BOLD).unwrap(),
+            font: font,
+            font_bold: font_bold,
             changed: BTreeSet::new(),
             mouse_x: 0,
             mouse_y: 0,
