@@ -54,8 +54,10 @@ fn main() {
         .stdin(Stdio::from_raw_fd(slave_stdin.as_raw_fd()))
         .stdout(Stdio::from_raw_fd(slave_stdout.as_raw_fd()))
         .stderr(Stdio::from_raw_fd(slave_stderr.as_raw_fd()))
-        .env("COLUMNS", format!("{}", columns))
-        .env("LINES", format!("{}", lines))
+        // Not setting COLUMNS and LINES fixes many applications that use it
+        // to quickly get the current terminal size instead of TIOCSWINSZ
+        .env("COLUMNS", "")
+        .env("LINES", "")
         .env("TERM", "xterm-256color")
         .env("TTY", tty_path)
         .before_exec(|| {
