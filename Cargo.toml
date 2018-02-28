@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 failure   = "0.1.1"
-orbclient = "0.3"
+orbclient = "0.3.13"
 orbfont   = "0.1"
 ransid    = "0.4"
 serde     = "1.0"

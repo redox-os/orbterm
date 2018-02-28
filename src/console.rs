@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use std::io::Result;
 
 use config::Config;
-use orbclient::{Color, EventOption, Renderer, Window, WindowFlag};
+use orbclient::{Color, EventOption, Mode, Renderer, Window, WindowFlag};
 use orbfont::Font;
 
 static DEFAULT_FONT: &'static [u8] = include_bytes!("../res/FiraMono-Regular.ttf");
@@ -14,8 +14,8 @@ static DEFAULT_FONT_BOLD: &'static [u8] = include_bytes!("../res/FiraMono-Bold.t
 #[derive(Clone, Copy)]
 pub struct Block {
     c: char,
-    fg: u32,
-    bg: u32,
+    fg: Color,
+    bg: Color,
     bold: bool,
 }
 
@@ -46,7 +46,10 @@ impl Console {
 
         let ransid = ransid::Console::new(width as usize / block_width, height as usize / block_height);
         let grid = vec![Block {
-            c: '\0', fg: 0, bg: 0, bold: false
+            c: '\0',
+            fg: Color { data: 0 },
+            bg: Color { data: 0 },
+            bold: false
         }; ransid.state.w * ransid.state.h].into_boxed_slice();
 
         let font = Font::from_path(&config.font).unwrap_or_else(|_| Font::from_data(DEFAULT_FONT).unwrap());
@@ -243,6 +246,12 @@ impl Console {
     }
 
     pub fn write(&mut self, buf: &[u8], sync: bool) -> Result<usize> {
+        let cvt = |color: ransid::Color| -> Color {
+            Color {
+                data: color.as_rgb()
+            }
+        };
+
         if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
             let x = self.console.state.x;
             let y = self.console.state.y;
@@ -271,14 +280,14 @@ impl Console {
                 match event {
                     ransid::Event::Char { x, y, c, color, bold, .. } => {
                         if bold {
-                            font_bold.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: color.as_rgb() });
+                            font_bold.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, cvt(color));
                         } else {
-                            font.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: color.as_rgb() });
+                            font.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, cvt(color));
                         }
 
                         if let Some(ref mut block) = grid.get_mut(y * console_w + x) {
                             block.c = c;
-                            block.fg = color.as_rgb();
+                            block.fg = cvt(color);
                             block.bold = bold;
                         }
 
@@ -288,13 +297,15 @@ impl Console {
                         input.extend(data);
                     },
                     ransid::Event::Rect { x, y, w, h, color } => {
-                        window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, w as u32 * block_width as u32, h as u32 * block_height as u32, Color { data: color.as_rgb() });
+                        window.mode().set(Mode::Overwrite);
+                        window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, w as u32 * block_width as u32, h as u32 * block_height as u32, cvt(color));
+                        window.mode().set(Mode::Blend);
 
                         for y2 in y..y + h {
                             for x2 in x..x + w {
                                 if let Some(ref mut block) = grid.get_mut(y2 * console_w + x2) {
                                     block.c = '\0';
-                                    block.bg = color.as_rgb();
+                                    block.bg = cvt(color);
                                 }
                             }
                             changed.insert(y2);
@@ -304,7 +315,7 @@ impl Console {
                         if *alt != alternate {
                             mem::swap(grid, alt_grid);
 
-                            window.set(Color { data: console_bg.as_rgb() });
+                            window.set(cvt(console_bg));
 
                             for y in 0..console_h {
                                 for x in 0..console_w {
@@ -312,15 +323,18 @@ impl Console {
 
                                     if clear {
                                         block.c = '\0';
-                                        block.bg = console_bg.as_rgb();
+                                        block.bg = cvt(console_bg);
                                     }
 
-                                    window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, block_width as u32, block_height as u32, Color { data: block.bg });
+                                    window.mode().set(Mode::Overwrite);
+                                    window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, block_width as u32, block_height as u32, block.bg);
+                                    window.mode().set(Mode::Blend);
+
                                     if block.c != '\0' {
                                         if block.bold {
-                                            font_bold.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: block.fg });
+                                            font_bold.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, block.fg);
                                         } else {
-                                            font.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, Color { data: block.fg });
+                                            font.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, block.fg);
                                         }
                                     }
                                 }
@@ -399,16 +413,22 @@ impl Console {
     }
 
     fn resize_grid(&mut self, w: usize, h: usize) {
+        let cvt = |color: ransid::Color| -> Color {
+            Color {
+                data: color.as_rgb()
+            }
+        };
+
         if w != self.console.state.w || h != self.console.state.h {
             let mut grid = vec![Block {
-                c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
+                c: '\0', fg: cvt(self.console.state.foreground), bg: cvt(self.console.state.background), bold: false
             }; w * h].into_boxed_slice();
 
             let mut alt_grid = vec![Block {
-                c: '\0', fg: self.console.state.foreground.as_rgb(), bg: self.console.state.background.as_rgb(), bold: false
+                c: '\0', fg: cvt(self.console.state.foreground), bg: cvt(self.console.state.background), bold: false
             }; w * h].into_boxed_slice();
 
-            self.window.set(Color { data: self.console.state.background.as_rgb() });
+            self.window.set(cvt(self.console.state.background));
 
             {
                 let font = &self.font;
@@ -425,12 +445,15 @@ impl Console {
                             alt_grid[y * w + x] = alt_block;
                         }
 
-                        window.rect(x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, self.block_width as u32, self.block_height as u32, Color { data: block.bg });
+                        window.mode().set(Mode::Overwrite);
+                        window.rect(x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, self.block_width as u32, self.block_height as u32, block.bg);
+                        window.mode().set(Mode::Blend);
+
                         if block.c != '\0' {
                             if block.bold {
-                                font_bold.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
+                                font_bold.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, block.fg);
                             } else {
-                                font.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, Color { data: block.fg });
+                                font.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, block.fg);
                             }
                         }
                     }
