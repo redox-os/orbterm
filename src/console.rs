@@ -36,6 +36,7 @@ pub struct Console {
     pub requested: usize,
     pub block_width: usize,
     pub block_height: usize,
+    pub alpha: u8,
 }
 
 impl Console {
@@ -72,6 +73,7 @@ impl Console {
             requested: 0,
             block_width,
             block_height,
+            alpha: 224
         }
     }
 
@@ -246,9 +248,10 @@ impl Console {
     }
 
     pub fn write(&mut self, buf: &[u8], sync: bool) -> Result<usize> {
+        let alpha = self.alpha;
         let cvt = |color: ransid::Color| -> Color {
             Color {
-                data: color.as_rgb()
+                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF)
             }
         };
 
@@ -413,9 +416,10 @@ impl Console {
     }
 
     fn resize_grid(&mut self, w: usize, h: usize) {
+        let alpha = self.alpha;
         let cvt = |color: ransid::Color| -> Color {
             Color {
-                data: color.as_rgb()
+                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF)
             }
         };
 
