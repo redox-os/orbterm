@@ -31,7 +31,6 @@ use console::Console;
 use getpty::getpty;
 use handle::handle;
 use slave_stdio::slave_stdio;
-use xdg::BaseDirectories;
 
 mod before_exec;
 mod config;
@@ -44,18 +43,7 @@ const BLOCK_WIDTH: usize = 8;
 const BLOCK_HEIGHT: usize = BLOCK_WIDTH * 2;
 
 fn main() {
-    let result = do catch {
-        let xdg = BaseDirectories::with_prefix("orbterm")?;
-        if let Some(path) = xdg.find_config_file("config") {
-            Config::read(&path)
-        } else {
-            let path = xdg.place_config_file("config")?;
-            let config = Config::default();
-            config.write(&path)?;
-            Ok(config)
-        }
-    };
-    let config = match result {
+    let config = match Config::load() {
         Ok(config) => config,
         Err(err) => {
             eprintln!("orbterm: failed to open config: {}", err);
