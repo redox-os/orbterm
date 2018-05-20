@@ -16,10 +16,18 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
     let mut event_file = File::open("event:").expect("terminal: failed to open event file");
 
     let window_fd = console.window.as_raw_fd();
-    syscall::fevent(window_fd, syscall::flag::EVENT_READ).expect("terminal: failed to fevent console window");
+    event_file.write(&syscall::data::Event {
+        fd: window_fd,
+        flags: syscall::flag::EVENT_READ,
+        data: 0
+    ).expect("terminal: failed to fevent console window");
 
     let mut master = unsafe { File::from_raw_fd(master_fd) };
-    syscall::fevent(master_fd, syscall::flag::EVENT_READ).expect("terminal: failed to fevent master PTY");
+    event_file.write(&syscall::data::Event {
+        fd: master_fd,
+        flags: syscall::flag::EVENT_READ,
+        data: 0
+    }).expect("terminal: failed to fevent master PTY");
 
     let mut handle_event = |event_id: usize, event_count: usize| -> bool {
         if event_id == window_fd {
