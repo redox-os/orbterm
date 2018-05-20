@@ -17,19 +17,19 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
 
     let window_fd = console.window.as_raw_fd();
     event_file.write(&syscall::data::Event {
-        fd: window_fd,
+        id: window_fd,
         flags: syscall::flag::EVENT_READ,
         data: 0
-    ).expect("terminal: failed to fevent console window");
+    }).expect("terminal: failed to fevent console window");
 
     let mut master = unsafe { File::from_raw_fd(master_fd) };
     event_file.write(&syscall::data::Event {
-        fd: master_fd,
+        id: master_fd,
         flags: syscall::flag::EVENT_READ,
         data: 0
     }).expect("terminal: failed to fevent master PTY");
 
-    let mut handle_event = |event_id: usize, event_count: usize| -> bool {
+    let mut handle_event = |event_id: usize| -> bool {
         if event_id == window_fd {
             for event in console.window.events() {
                 let event_option = event.to_option();
@@ -56,11 +56,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
         } else if event_id == master_fd {
             let mut packet = [0; 4096];
             let count = master.read(&mut packet).expect("terminal: failed to read master PTY");
-            if count == 0 {
-                if event_count == 0 {
-                    return false;
-                }
-            } else {
+            if count != 0 {
                 console.write(&packet[1..count], true).expect("terminal: failed to write to console");
 
                 if packet[0] & 1 == 1 {
@@ -85,13 +81,13 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
         true
     };
 
-    handle_event(window_fd, 0);
-    handle_event(master_fd, 0);
+    handle_event(window_fd);
+    handle_event(master_fd);
 
     'events: loop {
         let mut sys_event = syscall::Event::default();
         event_file.read(&mut sys_event).expect("terminal: failed to read event file");
-        if ! handle_event(sys_event.id, sys_event.data) {
+        if ! handle_event(sys_event.id) {
             break 'events;
         }
 
