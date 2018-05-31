@@ -57,7 +57,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
             let mut packet = [0; 4096];
             loop {
                 let count = match master.read(&mut packet) {
-                    Ok(0) => break,
+                    Ok(0) => return,
                     Ok(count) => count,
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => break,
                     Err(_) => panic!("terminal: failed to read master PTY")
