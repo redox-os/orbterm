@@ -1,6 +1,5 @@
 #![deny(warnings)]
 #![feature(asm)]
-#![feature(catch_expr)]
 #![feature(const_fn)]
 
 #[macro_use] extern crate serde_derive;

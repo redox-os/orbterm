@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 failure   = "0.1.1"
-orbclient = "0.3.13"
+orbclient = "0.3.16"
 orbfont   = "0.1"
 ransid    = "0.4"
 serde     = "1.0"
@@ -28,3 +28,6 @@ libc = "0.2"
 [target.'cfg(target_os = "redox")'.dependencies]
 redox_termios = "0.1"
 redox_syscall = "0.1"
+
+[replace]
+"orbclient:0.3.16" = { git = "https://gitlab.redox-os.org/redox-os/orbclient" }
