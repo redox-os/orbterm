@@ -8,9 +8,6 @@ use config::Config;
 use orbclient::{Color, EventOption, Mode, Renderer, Window, WindowFlag};
 use orbfont::Font;
 
-static DEFAULT_FONT: &'static [u8] = include_bytes!("../res/FiraMono-Regular.ttf");
-static DEFAULT_FONT_BOLD: &'static [u8] = include_bytes!("../res/FiraMono-Bold.ttf");
-
 #[derive(Clone, Copy)]
 pub struct Block {
     c: char,
@@ -53,8 +50,12 @@ impl Console {
             bold: false
         }; ransid.state.w * ransid.state.h].into_boxed_slice();
 
-        let font = Font::from_path(&config.font).unwrap_or_else(|_| Font::from_data(DEFAULT_FONT).unwrap());
-        let font_bold = Font::from_path(&config.font_bold).unwrap_or_else(|_| Font::from_data(DEFAULT_FONT_BOLD).unwrap());
+        let font = Font::from_path(&config.font).unwrap_or_else(|_| {
+            Font::find(Some("Mono"), None, Some("Regular")).expect("Cannot find a regular monospace font")
+        });
+        let font_bold = Font::from_path(&config.font_bold).unwrap_or_else(|_| {
+            Font::find(Some("Mono"), None, Some("Bold")).expect("Cannot find a bold monospace font")
+        });
 
         Console {
             console: ransid,
