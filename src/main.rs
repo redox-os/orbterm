@@ -3,6 +3,7 @@
 #![feature(const_fn)]
 
 #[macro_use] extern crate serde_derive;
+extern crate env_logger;
 extern crate failure;
 extern crate orbclient;
 extern crate orbfont;
@@ -42,6 +43,8 @@ const BLOCK_WIDTH: usize = 8;
 const BLOCK_HEIGHT: usize = BLOCK_WIDTH * 2;
 
 fn main() {
+    env_logger::init();
+
     let config = match Config::load() {
         Ok(config) => config,
         Err(err) => {
