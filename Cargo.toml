@@ -2,7 +2,7 @@
 name = "orbterm"
 description = "The Orbital Terminal"
 repository = "https://gitlab.redox-os.org/redox-os/orbterm"
-version = "0.3.2"
+version = "0.3.3"
 license = "MIT"
 readme = "README.md"
 authors = ["Jeremy Soller <jackpot51@gmail.com>"]
@@ -19,8 +19,7 @@ ransid    = "0.4"
 serde     = "1.0"
 serde_derive = "1.0"
 toml      = "0.4"
-xdg = { git = "https://github.com/whitequark/rust-xdg" }
-# TODO: Replace with crates.io when next xdg version is released
+xdg = "2.2"
 
 [target.'cfg(not(target_os = "redox"))'.dependencies]
 libc = "0.2"
