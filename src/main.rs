@@ -1,6 +1,4 @@
 #![deny(warnings)]
-#![feature(asm)]
-#![feature(const_fn)]
 
 #[macro_use] extern crate serde_derive;
 extern crate env_logger;
