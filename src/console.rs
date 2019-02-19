@@ -38,7 +38,7 @@ pub struct Console {
 
 impl Console {
     pub fn new(config: &Config, width: u32, height: u32, block_width: usize, block_height: usize) -> Console {
-        let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[WindowFlag::Async, WindowFlag::Resizable])
+        let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[WindowFlag::Async, WindowFlag::Resizable, WindowFlag::Transparent])
                             .unwrap();
         window.sync();
 
