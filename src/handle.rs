@@ -34,8 +34,8 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
             for event in console.window.events() {
                 let event_option = event.to_option();
 
-                let console_w = console.console.state.w;
-                let console_h = console.console.state.h;
+                let console_w = console.ransid.state.w;
+                let console_h = console.ransid.state.h;
 
                 console.input(event_option);
 
@@ -43,11 +43,11 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                     return false;
                 }
 
-                if console_w != console.console.state.w || console_h != console.console.state.h {
+                if console_w != console.ransid.state.w || console_h != console.ransid.state.h {
                     if let Ok(winsize_fd) = syscall::dup(master_fd, b"winsize") {
                         let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
-                            ws_row: console.console.state.h as u16,
-                            ws_col: console.console.state.w as u16
+                            ws_row: console.ransid.state.h as u16,
+                            ws_col: console.ransid.state.w as u16
                         });
                         let _ = syscall::close(winsize_fd);
                     }
@@ -124,8 +124,8 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
         for event in console.window.events() {
             let event_option = event.to_option();
 
-            let console_w = console.console.state.w;
-            let console_h = console.console.state.h;
+            let console_w = console.ransid.state.w;
+            let console_h = console.ransid.state.h;
 
             console.input(event_option);
 
@@ -133,11 +133,11 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                 break 'events;
             }
 
-            if console_w != console.console.state.w || console_h != console.console.state.h {
+            if console_w != console.ransid.state.w || console_h != console.ransid.state.h {
                 unsafe {
                     let size = libc::winsize {
-                        ws_row: console.console.state.h as libc::c_ushort,
-                        ws_col: console.console.state.w as libc::c_ushort,
+                        ws_row: console.ransid.state.h as libc::c_ushort,
+                        ws_col: console.ransid.state.w as libc::c_ushort,
                         ws_xpixel: 0,
                         ws_ypixel: 0
                     };

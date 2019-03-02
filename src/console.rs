@@ -17,7 +17,7 @@ pub struct Block {
 }
 
 pub struct Console {
-    pub console: ransid::Console,
+    pub ransid: ransid::Console,
     pub window: Window,
     pub alternate: bool,
     pub grid: Box<[Block]>,
@@ -38,17 +38,29 @@ pub struct Console {
 
 impl Console {
     pub fn new(config: &Config, width: u32, height: u32, block_width: usize, block_height: usize) -> Console {
-        let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[WindowFlag::Async, WindowFlag::Resizable, WindowFlag::Transparent])
-                            .unwrap();
-        window.sync();
+        let alpha = 224;
+        let cvt = |color: ransid::Color| -> Color {
+            Color {
+                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF)
+            }
+        };
 
         let ransid = ransid::Console::new(width as usize / block_width, height as usize / block_height);
+
+        let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[
+            WindowFlag::Async, WindowFlag::Resizable, WindowFlag::Transparent
+        ]).unwrap();
+        window.set(cvt(ransid.state.background));
+        window.sync();
+
         let grid = vec![Block {
             c: '\0',
-            fg: Color { data: 0 },
-            bg: Color { data: 0 },
+            fg: cvt(ransid.state.foreground),
+            bg: cvt(ransid.state.background),
             bold: false
         }; ransid.state.w * ransid.state.h].into_boxed_slice();
+
+        let alt_grid = grid.clone();
 
         let font = Font::from_path(&config.font).unwrap_or_else(|_| {
             Font::find(Some("Mono"), None, Some("Regular")).expect("Cannot find a regular monospace font")
@@ -58,13 +70,13 @@ impl Console {
         });
 
         Console {
-            console: ransid,
+            ransid,
+            window,
             alternate: false,
-            grid: grid.clone(),
-            alt_grid: grid,
-            window: window,
-            font: font,
-            font_bold: font_bold,
+            grid,
+            alt_grid,
+            font,
+            font_bold,
             changed: BTreeSet::new(),
             mouse_x: 0,
             mouse_y: 0,
@@ -74,7 +86,7 @@ impl Console {
             requested: 0,
             block_width,
             block_height,
-            alpha: 224
+            alpha
         }
     }
 
@@ -161,7 +173,7 @@ impl Console {
             EventOption::Mouse(mouse_event) => {
                 let x = (mouse_event.x / self.block_width as i32) as u16 + 1;
                 let y = (mouse_event.y / self.block_height as i32) as u16 + 1;
-                if self.console.state.mouse_rxvt && self.console.state.mouse_btn {
+                if self.ransid.state.mouse_rxvt && self.ransid.state.mouse_btn {
                     if self.mouse_left && (x != self.mouse_x || y != self.mouse_y) {
                         let string = format!("\x1B[<{};{};{}M", 32, self.mouse_x, self.mouse_y);
                         self.input.extend(string.as_bytes());
@@ -171,7 +183,7 @@ impl Console {
                 self.mouse_y = y;
             },
             EventOption::Button(button_event) => {
-                if self.console.state.mouse_rxvt {
+                if self.ransid.state.mouse_rxvt {
                     if button_event.left {
                         if ! self.mouse_left {
                             let string = format!("\x1B[<{};{};{}M", 0, self.mouse_x, self.mouse_y);
@@ -194,7 +206,7 @@ impl Console {
 
                     self.resize_grid(w, h);
                     self.sync();
-                } else if self.console.state.mouse_rxvt {
+                } else if self.ransid.state.mouse_rxvt {
                     if scroll_event.y > 0 {
                         let string = format!("\x1B[<{};{};{}M", 64, self.mouse_x, self.mouse_y);
                         self.input.extend(string.as_bytes());
@@ -256,9 +268,9 @@ impl Console {
             }
         };
 
-        if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
-            let x = self.console.state.x;
-            let y = self.console.state.y;
+        if self.ransid.state.cursor && self.ransid.state.x < self.ransid.state.w && self.ransid.state.y < self.ransid.state.h {
+            let x = self.ransid.state.x;
+            let y = self.ransid.state.y;
             let block_width = self.block_width;
             let block_height = self.block_height;
             self.invert(x * block_width, y * block_height, block_width, block_height);
@@ -268,9 +280,9 @@ impl Console {
         {
             let font = &self.font;
             let font_bold = &self.font_bold;
-            let console_bg = self.console.state.background;
-            let console_w = self.console.state.w;
-            let console_h = self.console.state.h;
+            let console_bg = self.ransid.state.background;
+            let console_w = self.ransid.state.w;
+            let console_h = self.ransid.state.h;
             let block_width = self.block_width;
             let block_height = self.block_height;
             let alt = &mut self.alternate;
@@ -280,7 +292,7 @@ impl Console {
             let input = &mut self.input;
             let changed = &mut self.changed;
             let mut str_buf = [0; 4];
-            self.console.write(buf, |event| {
+            self.ransid.write(buf, |event| {
                 match event {
                     ransid::Event::Char { x, y, c, color, bold, .. } => {
                         if bold {
@@ -400,9 +412,9 @@ impl Console {
             });
         }
 
-        if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
-            let x = self.console.state.x;
-            let y = self.console.state.y;
+        if self.ransid.state.cursor && self.ransid.state.x < self.ransid.state.w && self.ransid.state.y < self.ransid.state.h {
+            let x = self.ransid.state.x;
+            let y = self.ransid.state.y;
             let block_width = self.block_width;
             let block_height = self.block_height;
             self.invert(x * block_width, y * block_height, block_width, block_height);
@@ -424,29 +436,29 @@ impl Console {
             }
         };
 
-        if w != self.console.state.w || h != self.console.state.h {
+        if w != self.ransid.state.w || h != self.ransid.state.h {
             let mut grid = vec![Block {
-                c: '\0', fg: cvt(self.console.state.foreground), bg: cvt(self.console.state.background), bold: false
+                c: '\0', fg: cvt(self.ransid.state.foreground), bg: cvt(self.ransid.state.background), bold: false
             }; w * h].into_boxed_slice();
 
             let mut alt_grid = vec![Block {
-                c: '\0', fg: cvt(self.console.state.foreground), bg: cvt(self.console.state.background), bold: false
+                c: '\0', fg: cvt(self.ransid.state.foreground), bg: cvt(self.ransid.state.background), bold: false
             }; w * h].into_boxed_slice();
 
-            self.window.set(cvt(self.console.state.background));
+            self.window.set(cvt(self.ransid.state.background));
 
             {
                 let font = &self.font;
                 let font_bold = &self.font_bold;
                 let window = &mut self.window;
                 let mut str_buf = [0; 4];
-                for y in 0..self.console.state.h {
-                    for x in 0..self.console.state.w {
-                        let block = self.grid[y * self.console.state.w + x];
+                for y in 0..self.ransid.state.h {
+                    for x in 0..self.ransid.state.w {
+                        let block = self.grid[y * self.ransid.state.w + x];
                         if y < h && x < w {
                             grid[y * w + x] = block;
 
-                            let alt_block = self.alt_grid[y * self.console.state.w + x];
+                            let alt_block = self.alt_grid[y * self.ransid.state.w + x];
                             alt_grid[y * w + x] = alt_block;
                         }
 
@@ -466,13 +478,13 @@ impl Console {
                 }
             }
 
-            self.console.resize(w, h);
+            self.ransid.resize(w, h);
             self.grid = grid;
             self.alt_grid = alt_grid;
 
-            if self.console.state.cursor && self.console.state.x < self.console.state.w && self.console.state.y < self.console.state.h {
-                let x = self.console.state.x;
-                let y = self.console.state.y;
+            if self.ransid.state.cursor && self.ransid.state.x < self.ransid.state.w && self.ransid.state.y < self.ransid.state.h {
+                let x = self.ransid.state.x;
+                let y = self.ransid.state.y;
                 let block_width = self.block_width;
                 let block_height = self.block_height;
                 self.invert(x * block_width, y * block_height, block_width, block_height);
