@@ -49,9 +49,6 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
 
 #[cfg(target_os="redox")]
 pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
-    use redox_termios;
-    use syscall;
-
     let master = syscall::open("pty:", syscall::O_CLOEXEC | syscall::O_RDWR | syscall::O_CREAT | syscall::O_NONBLOCK).unwrap();
 
     if let Ok(winsize_fd) = syscall::dup(master, b"winsize") {

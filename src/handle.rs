@@ -8,9 +8,6 @@ use console::Console;
 
 #[cfg(target_os = "redox")]
 pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
-    use redox_termios;
-    use syscall;
-
     use std::os::unix::io::AsRawFd;
 
     let mut event_file = File::open("event:").expect("terminal: failed to open event file");

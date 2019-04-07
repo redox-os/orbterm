@@ -31,7 +31,6 @@ pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
 
 #[cfg(target_os="redox")]
 pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
-    use syscall;
     use syscall::flag::{O_CLOEXEC, O_RDONLY, O_WRONLY};
 
     let stdin = unsafe { File::from_raw_fd(
