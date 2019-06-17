@@ -12,7 +12,7 @@ name = "orbterm"
 path = "src/main.rs"
 
 [dependencies]
-env_logger = "0.6"
+env_logger = { version = "0.6", optional = true }
 failure = "0.1.1"
 orbclient = "0.3.17"
 orbfont = "0.1"

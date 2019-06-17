@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{Error, Result};
-use std::os::unix::io::FromRawFd;
+use std::os::unix::io::{FromRawFd, RawFd};
 
 #[cfg(not(target_os="redox"))]
 pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
@@ -34,13 +34,13 @@ pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
     use syscall::flag::{O_CLOEXEC, O_RDONLY, O_WRONLY};
 
     let stdin = unsafe { File::from_raw_fd(
-        syscall::open(tty_path, O_CLOEXEC | O_RDONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
+        syscall::open(tty_path, O_CLOEXEC | O_RDONLY).map_err(|err| Error::from_raw_os_error(err.errno))? as RawFd
     ) };
     let stdout = unsafe { File::from_raw_fd(
-        syscall::open(tty_path, O_CLOEXEC | O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
+        syscall::open(tty_path, O_CLOEXEC | O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))? as RawFd
     ) };
     let stderr = unsafe { File::from_raw_fd(
-        syscall::open(tty_path, O_CLOEXEC | O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))?
+        syscall::open(tty_path, O_CLOEXEC | O_WRONLY).map_err(|err| Error::from_raw_os_error(err.errno))? as RawFd
     ) };
 
     Ok((stdin, stdout, stderr))

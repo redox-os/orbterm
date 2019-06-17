@@ -14,20 +14,20 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
 
     let window_fd = console.window.as_raw_fd();
     event_file.write(&syscall::data::Event {
-        id: window_fd,
+        id: window_fd as usize,
         flags: syscall::flag::EVENT_READ,
         data: 0
     }).expect("terminal: failed to fevent console window");
 
     let mut master = unsafe { File::from_raw_fd(master_fd) };
     event_file.write(&syscall::data::Event {
-        id: master_fd,
+        id: master_fd as usize,
         flags: syscall::flag::EVENT_READ,
         data: 0
     }).expect("terminal: failed to fevent master PTY");
 
     let mut handle_event = |event_id: usize| -> bool {
-        if event_id == window_fd {
+        if event_id == window_fd as usize {
             for event in console.window.events() {
                 let event_option = event.to_option();
 
@@ -41,7 +41,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                 }
 
                 if console_w != console.ransid.state.w || console_h != console.ransid.state.h {
-                    if let Ok(winsize_fd) = syscall::dup(master_fd, b"winsize") {
+                    if let Ok(winsize_fd) = syscall::dup(master_fd as usize, b"winsize") {
                         let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
                             ws_row: console.ransid.state.h as u16,
                             ws_col: console.ransid.state.w as u16
@@ -50,7 +50,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                     }
                 }
             }
-        } else if event_id == master_fd {
+        } else if event_id == master_fd as usize {
             let mut packet = [0; 4096];
             loop {
                 let count = match master.read(&mut packet) {
@@ -83,8 +83,8 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
         true
     };
 
-    handle_event(window_fd);
-    handle_event(master_fd);
+    handle_event(window_fd as usize);
+    handle_event(master_fd as usize);
 
     'events: loop {
         let mut sys_event = syscall::Event::default();

@@ -61,5 +61,5 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
 
     let mut buf: [u8; 4096] = [0; 4096];
     let count = syscall::fpath(master, &mut buf).unwrap();
-    (master, unsafe { String::from_utf8_unchecked(Vec::from(&buf[..count])) })
+    (master as RawFd, unsafe { String::from_utf8_unchecked(Vec::from(&buf[..count])) })
 }
