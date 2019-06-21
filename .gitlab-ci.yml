@@ -2,6 +2,7 @@ image: "redoxos/redoxer"
 
 build:linux:
   script:
+  - apt-get install -qq -y libsdl2-dev
   - cargo build
 
 build:redox:
