@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 #[macro_use] extern crate serde_derive;
 #[cfg(feature = "env_logger")]
 extern crate env_logger;
@@ -77,7 +75,7 @@ fn main() {
         .env("LINES", "")
         .env("TERM", "xterm-256color")
         .env("TTY", tty_path)
-        .before_exec(|| {
+        .pre_exec(|| {
             before_exec()
         });
     }

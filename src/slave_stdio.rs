@@ -4,7 +4,7 @@ use std::os::unix::io::{FromRawFd, RawFd};
 
 #[cfg(not(target_os="redox"))]
 pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
-    use libc::{self, O_CLOEXEC, O_RDONLY, O_WRONLY};
+    use libc::{O_CLOEXEC, O_RDONLY, O_WRONLY};
     use std::ffi::CString;
 
     let cvt = |res: i32| -> Result<i32> {
@@ -17,13 +17,13 @@ pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
 
     let tty_c = CString::new(tty_path).unwrap();
     let stdin = unsafe { File::from_raw_fd(
-        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_RDONLY))?
+        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_RDONLY))? as RawFd
     ) };
     let stdout = unsafe { File::from_raw_fd(
-        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_WRONLY))?
+        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_WRONLY))? as RawFd
     ) };
     let stderr = unsafe { File::from_raw_fd(
-        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_WRONLY))?
+        cvt(libc::open(tty_c.as_ptr(), O_CLOEXEC | O_WRONLY))? as RawFd
     ) };
 
     Ok((stdin, stdout, stderr))

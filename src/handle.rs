@@ -111,7 +111,6 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
 
 #[cfg(not(target_os = "redox"))]
 pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
-    use libc;
     use std::thread;
     use std::time::Duration;
 

@@ -2,7 +2,6 @@ use std::os::unix::io::RawFd;
 
 #[cfg(not(target_os="redox"))]
 pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
-    use libc;
     use std::ffi::CStr;
     use std::fs::OpenOptions;
     use std::io::{self, Error};
