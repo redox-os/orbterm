@@ -8,7 +8,7 @@ use config::Config;
 use orbclient::{Color, EventOption, Mode, Renderer, Window, WindowFlag};
 use orbfont::Font;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Block {
     c: char,
     fg: Color,
@@ -34,6 +34,8 @@ pub struct Console {
     pub block_width: usize,
     pub block_height: usize,
     pub alpha: u8,
+    pub selection: Option<(usize, usize)>,
+    pub last_selection: Option<(usize, usize)>,
 }
 
 impl Console {
@@ -86,11 +88,35 @@ impl Console {
             requested: 0,
             block_width,
             block_height,
-            alpha
+            alpha,
+            selection: None,
+            last_selection: None,
         }
     }
 
+    pub fn selection_text(&self) -> String {
+        let mut string = String::new();
+        if let Some(selection) = self.selection {
+            let mut skipping = false;
+            for i in cmp::min(selection.0, selection.1) .. cmp::max(selection.0, selection.1) {
+                if let Some(block) = self.grid.get(i) {
+                    if block.c == '\0' {
+                        skipping = true;
+                    } else {
+                        if skipping {
+                            string.push('\n');
+                            skipping = false;
+                        }
+                        string.push(block.c);
+                    }
+                }
+            }
+        }
+        string
+    }
+
     pub fn input(&mut self, event_option: EventOption) {
+        let mut next_selection = self.selection;
         match event_option {
             EventOption::Key(key_event) => {
                 let mut buf = vec![];
@@ -173,28 +199,42 @@ impl Console {
             EventOption::Mouse(mouse_event) => {
                 let x = (mouse_event.x / self.block_width as i32) as u16 + 1;
                 let y = (mouse_event.y / self.block_height as i32) as u16 + 1;
-                if self.ransid.state.mouse_rxvt && self.ransid.state.mouse_btn {
-                    if self.mouse_left && (x != self.mouse_x || y != self.mouse_y) {
-                        let string = format!("\x1B[<{};{};{}M", 32, self.mouse_x, self.mouse_y);
-                        self.input.extend(string.as_bytes());
+                if self.ransid.state.mouse_rxvt {
+                    if self.ransid.state.mouse_btn {
+                        if self.mouse_left && (x != self.mouse_x || y != self.mouse_y) {
+                            let string = format!("\x1B[<{};{};{}M", 32, self.mouse_x, self.mouse_y);
+                            self.input.extend(string.as_bytes());
+                        }
                     }
+                } else if self.mouse_left {
+                    let i = (y as usize - 1) * self.ransid.state.w as usize + (x as usize - 1);
+                    next_selection = match self.selection {
+                        Some(selection) => Some((selection.0, i)),
+                        None => Some((i, i)),
+                    };
                 }
                 self.mouse_x = x;
                 self.mouse_y = y;
             },
             EventOption::Button(button_event) => {
+                let x = self.mouse_x;
+                let y = self.mouse_y;
                 if self.ransid.state.mouse_rxvt {
                     if button_event.left {
                         if ! self.mouse_left {
-                            let string = format!("\x1B[<{};{};{}M", 0, self.mouse_x, self.mouse_y);
+                            let string = format!("\x1B[<{};{};{}M", 0, x, y);
                             self.input.extend(string.as_bytes());
                         }
                     } else if self.mouse_left {
-                        let string = format!("\x1B[<{};{};{}m", 0, self.mouse_x, self.mouse_y);
+                        let string = format!("\x1B[<{};{};{}m", 0, x, y);
                         self.input.extend(string.as_bytes());
                     }
-                    self.mouse_left = button_event.left;
+                } else if button_event.left && ! self.mouse_left {
+                    let i = (y as usize - 1) * self.ransid.state.w as usize + (x as usize - 1);
+                    next_selection = Some((i, i));
                 }
+
+                self.mouse_left = button_event.left;
             },
             EventOption::Scroll(scroll_event) => {
                 if self.ctrl {
@@ -223,6 +263,11 @@ impl Console {
                 self.sync();
             },
             _ => ()
+        }
+
+        if next_selection != self.selection {
+            self.selection = next_selection;
+            self.write(&[], true).expect("failed to write empty buffer after updating selection");
         }
     }
 
@@ -267,6 +312,17 @@ impl Console {
                 data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF)
             }
         };
+
+        if let Some(selection) = self.last_selection {
+            for i in cmp::min(selection.0, selection.1) .. cmp::max(selection.0, selection.1) {
+                let x = i % self.ransid.state.w;
+                let y = i / self.ransid.state.w;
+                let block_width = self.block_width;
+                let block_height = self.block_height;
+                self.invert(x * block_width, y * block_height, block_width, block_height);
+                self.changed.insert(y as usize);
+            }
+        }
 
         if self.ransid.state.cursor && self.ransid.state.x < self.ransid.state.w && self.ransid.state.y < self.ransid.state.h {
             let x = self.ransid.state.x;
@@ -421,6 +477,19 @@ impl Console {
             self.changed.insert(y as usize);
         }
 
+        if let Some(selection) = self.selection {
+            for i in cmp::min(selection.0, selection.1) .. cmp::max(selection.0, selection.1) {
+                let x = i % self.ransid.state.w;
+                let y = i / self.ransid.state.w;
+                let block_width = self.block_width;
+                let block_height = self.block_height;
+                self.invert(x * block_width, y * block_height, block_width, block_height);
+                self.changed.insert(y as usize);
+            }
+        }
+
+        self.last_selection = self.selection;
+
         if sync {
             self.sync();
         }
@@ -489,6 +558,9 @@ impl Console {
                 let block_height = self.block_height;
                 self.invert(x * block_width, y * block_height, block_width, block_height);
             }
+
+            //TODO: Figure out what should happen on resize
+            self.selection = None;
         }
     }
 
