@@ -181,6 +181,17 @@ impl Console {
                         _ => {
                             let c = match key_event.character {
                                 '\n' => '\r',
+                                // Copy with ctrl-shift-c
+                                'C' if self.ctrl => {
+                                    let text = self.selection_text();
+                                    self.window.set_clipboard(&text);
+                                    '\0'
+                                },
+                                // Paste with ctrl-shift-v
+                                'V' if self.ctrl => {
+                                    buf.extend_from_slice(&self.window.clipboard().as_bytes());
+                                    '\0'
+                                },
                                 c @ 'A' ..= 'Z' if self.ctrl => ((c as u8 - b'A') + b'\x01') as char,
                                 c @ 'a' ..= 'z' if self.ctrl => ((c as u8 - b'a') + b'\x01') as char,
                                 c => c
