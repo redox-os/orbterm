@@ -73,6 +73,9 @@ fn main() {
         // to quickly get the current terminal size instead of TIOCSWINSZ
         .env("COLUMNS", "")
         .env("LINES", "")
+        // It is useful to know if we are running inside of orbterm, some times
+        .env("ORBTERM_VERSION", env!("CARGO_PKG_VERSION"))
+        // We emulate xterm-256color
         .env("TERM", "xterm-256color")
         .env("TTY", tty_path)
         .pre_exec(|| {
