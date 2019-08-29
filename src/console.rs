@@ -4,7 +4,6 @@ use std::{cmp, mem, ptr};
 use std::collections::BTreeSet;
 use std::io::Result;
 
-use BLOCK_WIDTH;
 use config::Config;
 use orbclient::{Color, EventOption, Mode, Renderer, Window, WindowFlag};
 use orbfont::Font;
@@ -34,6 +33,8 @@ pub struct Console {
     pub requested: usize,
     pub block_width: usize,
     pub block_height: usize,
+    pub default_block_width: usize,
+    pub default_block_height: usize,
     pub alpha: u8,
     pub selection: Option<(usize, usize)>,
     pub last_selection: Option<(usize, usize)>,
@@ -89,6 +90,8 @@ impl Console {
             requested: 0,
             block_width,
             block_height,
+            default_block_width: block_width,
+            default_block_height: block_height,
             alpha,
             selection: None,
             last_selection: None,
@@ -127,7 +130,8 @@ impl Console {
                 } else if key_event.pressed {
                     match key_event.scancode {
                         orbclient::K_0 if self.ctrl => { // Ctrl-0 reset block size
-                            self.set_block_size(BLOCK_WIDTH);
+                            self.block_width = self.default_block_width;
+                            self.block_height = self.default_block_height;
 
                             let w = self.window.width() as usize / self.block_width;
                             let h = self.window.height() as usize / self.block_height;

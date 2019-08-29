@@ -36,8 +36,8 @@ mod getpty;
 mod handle;
 mod slave_stdio;
 
-const BLOCK_WIDTH: usize = 8;
-const BLOCK_HEIGHT: usize = BLOCK_WIDTH * 2;
+const BLOCK_WIDTH: u32 = 8;
+const BLOCK_HEIGHT: u32 = BLOCK_WIDTH * 2;
 
 fn main() {
     #[cfg(feature = "env_logger")]
@@ -89,8 +89,14 @@ fn main() {
             drop(slave_stdout);
             drop(slave_stdin);
 
-            let mut console = Console::new(&config, columns * BLOCK_WIDTH as u32, lines * BLOCK_HEIGHT as u32,
-                                           BLOCK_WIDTH, BLOCK_HEIGHT);
+            let scale = (display_height / 1600) + 1;
+            let (block_width, block_height) = (BLOCK_WIDTH * scale, BLOCK_HEIGHT * scale);
+
+            let mut console = Console::new(
+                &config,
+                columns * block_width as u32, lines * block_height as u32,
+                block_width as usize, block_height as usize
+            );
             handle(&mut console, master_fd, &mut process);
         },
         Err(err) => {
