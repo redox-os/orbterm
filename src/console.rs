@@ -4,6 +4,7 @@ use std::{cmp, mem, ptr};
 use std::collections::BTreeSet;
 use std::io::Result;
 
+use BLOCK_WIDTH;
 use config::Config;
 use orbclient::{Color, EventOption, Mode, Renderer, Window, WindowFlag};
 use orbfont::Font;
@@ -125,7 +126,16 @@ impl Console {
                     self.ctrl = key_event.pressed;
                 } else if key_event.pressed {
                     match key_event.scancode {
-                        0x4A if self.ctrl => { // Ctrl-Minus
+                        orbclient::K_0 if self.ctrl => { // Ctrl-0 reset block size
+                            self.set_block_size(BLOCK_WIDTH);
+
+                            let w = self.window.width() as usize / self.block_width;
+                            let h = self.window.height() as usize / self.block_height;
+
+                            self.resize_grid(w, h);
+                            self.sync();
+                        },
+                        orbclient::K_MINUS if self.ctrl => { // Ctrl-Minus increase block size
                             let new_block_width = self.block_width - 1;
                             self.set_block_size(new_block_width);
 
@@ -135,7 +145,7 @@ impl Console {
                             self.resize_grid(w, h);
                             self.sync();
                         },
-                        0x4E if self.ctrl => { // Ctrl-Plus
+                        orbclient::K_EQUALS if self.ctrl => { // Ctrl-Plus decrease block size
                             let new_block_width = self.block_width + 1;
                             self.set_block_size(new_block_width);
 
@@ -145,37 +155,37 @@ impl Console {
                             self.resize_grid(w, h);
                             self.sync();
                         },
-                        0x0E => { // Backspace
+                        orbclient::K_BKSP => { // Backspace
                             buf.extend_from_slice(b"\x7F");
                         },
-                        0x47 => { // Home
+                        orbclient::K_HOME => { // Home
                             buf.extend_from_slice(b"\x1B[H");
                         },
-                        0x48 => { // Up
+                        orbclient::K_UP => { // Up
                             buf.extend_from_slice(b"\x1B[A");
                         },
-                        0x49 => { // Page up
+                        orbclient::K_PGUP => { // Page up
                             buf.extend_from_slice(b"\x1B[5~");
                         },
-                        0x4B => { // Left
+                        orbclient::K_LEFT => { // Left
                             buf.extend_from_slice(b"\x1B[D");
                         },
-                        0x4D => { // Right
+                        orbclient::K_RIGHT => { // Right
                             buf.extend_from_slice(b"\x1B[C");
                         },
-                        0x4F => { // End
+                        orbclient::K_END => { // End
                             buf.extend_from_slice(b"\x1B[F");
                         },
-                        0x50 => { // Down
+                        orbclient::K_DOWN => { // Down
                             buf.extend_from_slice(b"\x1B[B");
                         },
-                        0x51 => { // Page down
+                        orbclient::K_PGDN => { // Page down
                             buf.extend_from_slice(b"\x1B[6~");
                         },
                         0x52 => { // Insert
                             buf.extend_from_slice(b"\x1B[2~");
                         },
-                        0x53 => { // Delete
+                        orbclient::K_DEL => { // Delete
                             buf.extend_from_slice(b"\x1B[3~");
                         },
                         _ => {
