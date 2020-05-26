@@ -28,6 +28,3 @@ libc = "0.2.59"
 [target.'cfg(target_os = "redox")'.dependencies]
 redox_termios = "0.1.1"
 redox_syscall = "0.1.56"
-
-[patch.crates-io]
-libc = { git = "https://github.com/rust-lang/libc.git" }
