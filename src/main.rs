@@ -36,9 +36,6 @@ mod getpty;
 mod handle;
 mod slave_stdio;
 
-const BLOCK_WIDTH: u32 = 8;
-const BLOCK_HEIGHT: u32 = BLOCK_WIDTH * 2;
-
 fn main() {
     #[cfg(feature = "env_logger")]
     env_logger::init();
@@ -55,7 +52,9 @@ fn main() {
     let shell = args.next().unwrap_or(env::var("SHELL").unwrap_or("sh".to_string()));
 
     let (display_width, display_height) = orbclient::get_display_size().expect("terminal: failed to get display size");
-    let (columns, lines) = (cmp::min(1024, display_width * 4/5) / BLOCK_WIDTH as u32, cmp::min(768, display_height * 4/5) / BLOCK_HEIGHT as u32);
+    let scale = (display_height / 1600) + 1;
+    let (block_width, block_height) = (8 * scale, 16 * scale);
+    let (columns, lines) = (cmp::min(1024, display_width * 4/5) / block_width as u32, cmp::min(768, display_height * 4/5) / block_height as u32);
 
     let (master_fd, tty_path) = getpty(columns, lines);
     let (slave_stdin, slave_stdout, slave_stderr) = slave_stdio(&tty_path).expect("terminal: failed to get slave stdio");
@@ -88,9 +87,6 @@ fn main() {
             drop(slave_stderr);
             drop(slave_stdout);
             drop(slave_stdin);
-
-            let scale = (display_height / 1600) + 1;
-            let (block_width, block_height) = (BLOCK_WIDTH * scale, BLOCK_HEIGHT * scale);
 
             let mut console = Console::new(
                 &config,
