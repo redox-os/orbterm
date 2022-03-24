@@ -54,7 +54,10 @@ fn main() {
     let (display_width, display_height) = orbclient::get_display_size().expect("terminal: failed to get display size");
     let scale = (display_height / 1600) + 1;
     let (block_width, block_height) = (8 * scale, 16 * scale);
-    let (columns, lines) = (cmp::min(1024, display_width * 4/5) / block_width as u32, cmp::min(768, display_height * 4/5) / block_height as u32);
+    let (columns, lines) = (
+        cmp::min(1024 * scale, display_width * 4/5) / block_width as u32,
+        cmp::min(768 * scale, display_height * 4/5) / block_height as u32
+    );
 
     let (master_fd, tty_path) = getpty(columns, lines);
     let (slave_stdin, slave_stdout, slave_stderr) = slave_stdio(&tty_path).expect("terminal: failed to get slave stdio");
