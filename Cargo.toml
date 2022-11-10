@@ -16,7 +16,7 @@ env_logger = { version = "0.8", optional = true }
 failure = "0.1.5"
 orbclient = "0.3.24"
 orbfont = "0.1.8"
-ransid = "0.4.7"
+ransid = "0.5.0"
 serde = "1.0.94"
 serde_derive = "1.0.94"
 toml = "0.5.1"
