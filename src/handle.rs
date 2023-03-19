@@ -13,18 +13,22 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
     let mut event_file = File::open("event:").expect("terminal: failed to open event file");
 
     let window_fd = console.window.as_raw_fd();
-    event_file.write(&syscall::data::Event {
-        id: window_fd as usize,
-        flags: syscall::flag::EVENT_READ,
-        data: 0
-    }).expect("terminal: failed to fevent console window");
+    event_file
+        .write(&syscall::data::Event {
+            id: window_fd as usize,
+            flags: syscall::flag::EVENT_READ,
+            data: 0,
+        })
+        .expect("terminal: failed to fevent console window");
 
     let mut master = unsafe { File::from_raw_fd(master_fd) };
-    event_file.write(&syscall::data::Event {
-        id: master_fd as usize,
-        flags: syscall::flag::EVENT_READ,
-        data: 0
-    }).expect("terminal: failed to fevent master PTY");
+    event_file
+        .write(&syscall::data::Event {
+            id: master_fd as usize,
+            flags: syscall::flag::EVENT_READ,
+            data: 0,
+        })
+        .expect("terminal: failed to fevent master PTY");
 
     let mut handle_event = |event_id: usize| -> bool {
         if event_id == window_fd as usize {
@@ -42,10 +46,13 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
 
                 if console_w != console.ransid.state.w || console_h != console.ransid.state.h {
                     if let Ok(winsize_fd) = syscall::dup(master_fd as usize, b"winsize") {
-                        let _ = syscall::write(winsize_fd, &redox_termios::Winsize {
-                            ws_row: console.ransid.state.h as u16,
-                            ws_col: console.ransid.state.w as u16
-                        });
+                        let _ = syscall::write(
+                            winsize_fd,
+                            &redox_termios::Winsize {
+                                ws_row: console.ransid.state.h as u16,
+                                ws_col: console.ransid.state.w as u16,
+                            },
+                        );
                         let _ = syscall::close(winsize_fd);
                     }
                 }
@@ -57,9 +64,11 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                     Ok(0) => return false,
                     Ok(count) => count,
                     Err(ref err) if err.kind() == ErrorKind::WouldBlock => break,
-                    Err(_) => panic!("terminal: failed to read master PTY")
+                    Err(_) => panic!("terminal: failed to read master PTY"),
                 };
-                console.write(&packet[1..count], true).expect("terminal: failed to write to console");
+                console
+                    .write(&packet[1..count], true)
+                    .expect("terminal: failed to write to console");
 
                 if packet[0] & 1 == 1 {
                     console.redraw();
@@ -69,7 +78,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
             println!("Unknown event {}", event_id);
         }
 
-        if ! console.input.is_empty()  {
+        if !console.input.is_empty() {
             if let Err(err) = master.write(&console.input) {
                 let term_stderr = io::stderr();
                 let mut term_stderr = term_stderr.lock();
@@ -88,20 +97,22 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
 
     'events: loop {
         let mut sys_event = syscall::Event::default();
-        event_file.read(&mut sys_event).expect("terminal: failed to read event file");
-        if ! handle_event(sys_event.id) {
+        event_file
+            .read(&mut sys_event)
+            .expect("terminal: failed to read event file");
+        if !handle_event(sys_event.id) {
             break 'events;
         }
 
         match process.try_wait() {
             Ok(status) => match status {
                 Some(_code) => break 'events,
-                None => ()
+                None => (),
             },
             Err(err) => match err.kind() {
                 ErrorKind::WouldBlock => (),
-                _ => panic!("terminal: failed to wait on child: {:?}", err)
-            }
+                _ => panic!("terminal: failed to wait on child: {:?}", err),
+            },
         }
     }
 
@@ -135,7 +146,7 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                         ws_row: console.ransid.state.h as libc::c_ushort,
                         ws_col: console.ransid.state.w as libc::c_ushort,
                         ws_xpixel: 0,
-                        ws_ypixel: 0
+                        ws_ypixel: 0,
                     };
                     if libc::ioctl(master_fd, libc::TIOCSWINSZ, &size as *const libc::winsize) < 0 {
                         panic!("ioctl: {:?}", io::Error::last_os_error());
@@ -148,18 +159,20 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
         match master.read(&mut packet) {
             Ok(0) => {
                 break 'events;
-            },
+            }
             Ok(count) => {
-                console.write(&packet[..count], true).expect("terminal: failed to write to console");
+                console
+                    .write(&packet[..count], true)
+                    .expect("terminal: failed to write to console");
                 console.redraw();
-            },
+            }
             Err(err) => match err.kind() {
                 ErrorKind::WouldBlock => (),
-                _ => panic!("terminal: failed to read master PTY: {:?}", err)
-            }
+                _ => panic!("terminal: failed to read master PTY: {:?}", err),
+            },
         }
 
-        if ! console.input.is_empty()  {
+        if !console.input.is_empty() {
             if let Err(err) = master.write(&console.input) {
                 let term_stderr = io::stderr();
                 let mut term_stderr = term_stderr.lock();
@@ -174,13 +187,13 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
             Ok(status) => match status {
                 Some(_code) => {
                     break 'events;
-                },
-                None => ()
+                }
+                None => (),
             },
             Err(err) => match err.kind() {
                 ErrorKind::WouldBlock => (),
-                _ => panic!("terminal: failed to wait on child: {:?}", err)
-            }
+                _ => panic!("terminal: failed to wait on child: {:?}", err),
+            },
         }
 
         thread::sleep(Duration::new(0, 10));
