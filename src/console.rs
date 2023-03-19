@@ -192,6 +192,43 @@ impl Console {
                         orbclient::K_DEL => { // Delete
                             buf.extend_from_slice(b"\x1B[3~");
                         },
+                        // Function keys
+                        orbclient::K_F1 => {
+                            buf.extend_from_slice(b"\x1bOP");
+                        }
+                        orbclient::K_F2 => {
+                            buf.extend_from_slice(b"\x1bOQ");
+                        }
+                        orbclient::K_F3 => {
+                            buf.extend_from_slice(b"\x1bOR");
+                        }
+                        orbclient::K_F4 => {
+                            buf.extend_from_slice(b"\x1bOS");
+                        }
+                        orbclient::K_F5 => {
+                            buf.extend_from_slice(b"\x1b[15~");
+                        }
+                        orbclient::K_F6 => {
+                            buf.extend_from_slice(b"\x1b[17~");
+                        }
+                        orbclient::K_F7 => {
+                            buf.extend_from_slice(b"\x1b[18~");
+                        }
+                        orbclient::K_F8 => {
+                            buf.extend_from_slice(b"\x1b[19~");
+                        }
+                        orbclient::K_F9 => {
+                            buf.extend_from_slice(b"\x1b[20~");
+                        }
+                        orbclient::K_F10 => {
+                            buf.extend_from_slice(b"\x1b[21~");
+                        }
+                        orbclient::K_F11 => {
+                            buf.extend_from_slice(b"\x1b[23~");
+                        }
+                        orbclient::K_F12 => {
+                            buf.extend_from_slice(b"\x1b[24~");
+                        }
                         _ => {
                             let c = match key_event.character {
                                 '\n' => '\r',
