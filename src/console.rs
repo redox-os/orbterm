@@ -1,8 +1,8 @@
 extern crate ransid;
 
-use std::{cmp, mem, ptr};
 use std::collections::BTreeSet;
 use std::io::Result;
+use std::{cmp, mem, ptr};
 
 use config::Config;
 use orbclient::{Color, EventOption, Mode, Renderer, Window, WindowFlag};
@@ -41,33 +41,55 @@ pub struct Console {
 }
 
 impl Console {
-    pub fn new(config: &Config, width: u32, height: u32, block_width: usize, block_height: usize) -> Console {
+    pub fn new(
+        config: &Config,
+        width: u32,
+        height: u32,
+        block_width: usize,
+        block_height: usize,
+    ) -> Console {
         let alpha = 224;
         let cvt = |color: ransid::Color| -> Color {
             Color {
-                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF)
+                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF),
             }
         };
 
-        let ransid = ransid::Console::new(width as usize / block_width, height as usize / block_height);
+        let ransid =
+            ransid::Console::new(width as usize / block_width, height as usize / block_height);
 
-        let mut window = Window::new_flags(-1, -1, width, height, "Terminal", &[
-            WindowFlag::Async, WindowFlag::Resizable, WindowFlag::Transparent
-        ]).unwrap();
+        let mut window = Window::new_flags(
+            -1,
+            -1,
+            width,
+            height,
+            "Terminal",
+            &[
+                WindowFlag::Async,
+                WindowFlag::Resizable,
+                WindowFlag::Transparent,
+            ],
+        )
+        .unwrap();
         window.set(cvt(ransid.state.background));
         window.sync();
 
-        let grid = vec![Block {
-            c: '\0',
-            fg: cvt(ransid.state.foreground),
-            bg: cvt(ransid.state.background),
-            bold: false
-        }; ransid.state.w * ransid.state.h].into_boxed_slice();
+        let grid = vec![
+            Block {
+                c: '\0',
+                fg: cvt(ransid.state.foreground),
+                bg: cvt(ransid.state.background),
+                bold: false
+            };
+            ransid.state.w * ransid.state.h
+        ]
+        .into_boxed_slice();
 
         let alt_grid = grid.clone();
 
         let font = Font::from_path(&config.font).unwrap_or_else(|_| {
-            Font::find(Some("Mono"), None, Some("Regular")).expect("Cannot find a regular monospace font")
+            Font::find(Some("Mono"), None, Some("Regular"))
+                .expect("Cannot find a regular monospace font")
         });
         let font_bold = Font::from_path(&config.font_bold).unwrap_or_else(|_| {
             Font::find(Some("Mono"), None, Some("Bold")).expect("Cannot find a bold monospace font")
@@ -102,7 +124,7 @@ impl Console {
         let mut string = String::new();
         if let Some(selection) = self.selection {
             let mut skipping = false;
-            for i in cmp::min(selection.0, selection.1) .. cmp::max(selection.0, selection.1) {
+            for i in cmp::min(selection.0, selection.1)..cmp::max(selection.0, selection.1) {
                 if let Some(block) = self.grid.get(i) {
                     if block.c == '\0' {
                         skipping = true;
@@ -129,7 +151,8 @@ impl Console {
                     self.ctrl = key_event.pressed;
                 } else if key_event.pressed {
                     match key_event.scancode {
-                        orbclient::K_0 if self.ctrl => { // Ctrl-0 reset block size
+                        orbclient::K_0 if self.ctrl => {
+                            // Ctrl-0 reset block size
                             self.block_width = self.default_block_width;
                             self.block_height = self.default_block_height;
 
@@ -138,8 +161,9 @@ impl Console {
 
                             self.resize_grid(w, h);
                             self.sync();
-                        },
-                        orbclient::K_MINUS if self.ctrl => { // Ctrl-Minus increase block size
+                        }
+                        orbclient::K_MINUS if self.ctrl => {
+                            // Ctrl-Minus increase block size
                             let new_block_width = self.block_width - 1;
                             self.set_block_size(new_block_width);
 
@@ -148,8 +172,9 @@ impl Console {
 
                             self.resize_grid(w, h);
                             self.sync();
-                        },
-                        orbclient::K_EQUALS if self.ctrl => { // Ctrl-Plus decrease block size
+                        }
+                        orbclient::K_EQUALS if self.ctrl => {
+                            // Ctrl-Plus decrease block size
                             let new_block_width = self.block_width + 1;
                             self.set_block_size(new_block_width);
 
@@ -158,40 +183,88 @@ impl Console {
 
                             self.resize_grid(w, h);
                             self.sync();
-                        },
-                        orbclient::K_BKSP => { // Backspace
+                        }
+                        orbclient::K_BKSP => {
+                            // Backspace
                             buf.extend_from_slice(b"\x7F");
-                        },
-                        orbclient::K_HOME => { // Home
+                        }
+                        orbclient::K_HOME => {
+                            // Home
                             buf.extend_from_slice(b"\x1B[H");
-                        },
-                        orbclient::K_UP => { // Up
+                        }
+                        orbclient::K_UP => {
+                            // Up
                             buf.extend_from_slice(b"\x1B[A");
-                        },
-                        orbclient::K_PGUP => { // Page up
+                        }
+                        orbclient::K_PGUP => {
+                            // Page up
                             buf.extend_from_slice(b"\x1B[5~");
-                        },
-                        orbclient::K_LEFT => { // Left
+                        }
+                        orbclient::K_LEFT => {
+                            // Left
                             buf.extend_from_slice(b"\x1B[D");
-                        },
-                        orbclient::K_RIGHT => { // Right
+                        }
+                        orbclient::K_RIGHT => {
+                            // Right
                             buf.extend_from_slice(b"\x1B[C");
-                        },
-                        orbclient::K_END => { // End
+                        }
+                        orbclient::K_END => {
+                            // End
                             buf.extend_from_slice(b"\x1B[F");
-                        },
-                        orbclient::K_DOWN => { // Down
+                        }
+                        orbclient::K_DOWN => {
+                            // Down
                             buf.extend_from_slice(b"\x1B[B");
-                        },
-                        orbclient::K_PGDN => { // Page down
+                        }
+                        orbclient::K_PGDN => {
+                            // Page down
                             buf.extend_from_slice(b"\x1B[6~");
-                        },
-                        0x52 => { // Insert
+                        }
+                        0x52 => {
+                            // Insert
                             buf.extend_from_slice(b"\x1B[2~");
-                        },
-                        orbclient::K_DEL => { // Delete
+                        }
+                        orbclient::K_DEL => {
+                            // Delete
                             buf.extend_from_slice(b"\x1B[3~");
-                        },
+                        }
+                        // Function keys
+                        orbclient::K_F1 => {
+                            buf.extend_from_slice(b"\x1bOP");
+                        }
+                        orbclient::K_F2 => {
+                            buf.extend_from_slice(b"\x1bOQ");
+                        }
+                        orbclient::K_F3 => {
+                            buf.extend_from_slice(b"\x1bOR");
+                        }
+                        orbclient::K_F4 => {
+                            buf.extend_from_slice(b"\x1bOS");
+                        }
+                        orbclient::K_F5 => {
+                            buf.extend_from_slice(b"\x1b[15~");
+                        }
+                        orbclient::K_F6 => {
+                            buf.extend_from_slice(b"\x1b[17~");
+                        }
+                        orbclient::K_F7 => {
+                            buf.extend_from_slice(b"\x1b[18~");
+                        }
+                        orbclient::K_F8 => {
+                            buf.extend_from_slice(b"\x1b[19~");
+                        }
+                        orbclient::K_F9 => {
+                            buf.extend_from_slice(b"\x1b[20~");
+                        }
+                        orbclient::K_F10 => {
+                            buf.extend_from_slice(b"\x1b[21~");
+                        }
+                        orbclient::K_F11 => {
+                            buf.extend_from_slice(b"\x1b[23~");
+                        }
+                        orbclient::K_F12 => {
+                            buf.extend_from_slice(b"\x1b[24~");
+                        }
                         _ => {
                             let c = match key_event.character {
                                 '\n' => '\r',
@@ -200,15 +273,15 @@ impl Console {
                                     let text = self.selection_text();
                                     self.window.set_clipboard(&text);
                                     '\0'
-                                },
+                                }
                                 // Paste with ctrl-shift-v
                                 'V' if self.ctrl => {
                                     buf.extend_from_slice(&self.window.clipboard().as_bytes());
                                     '\0'
-                                },
-                                c @ 'A' ..= 'Z' if self.ctrl => ((c as u8 - b'A') + b'\x01') as char,
-                                c @ 'a' ..= 'z' if self.ctrl => ((c as u8 - b'a') + b'\x01') as char,
-                                c => c
+                                }
+                                c @ 'A'..='Z' if self.ctrl => ((c as u8 - b'A') + b'\x01') as char,
+                                c @ 'a'..='z' if self.ctrl => ((c as u8 - b'a') + b'\x01') as char,
+                                c => c,
                             };
 
                             if c != '\0' {
@@ -220,7 +293,7 @@ impl Console {
                 }
 
                 self.input.extend(buf);
-            },
+            }
             EventOption::Mouse(mouse_event) => {
                 let x = (mouse_event.x / self.block_width as i32) as u16 + 1;
                 let y = (mouse_event.y / self.block_height as i32) as u16 + 1;
@@ -240,13 +313,13 @@ impl Console {
                 }
                 self.mouse_x = x;
                 self.mouse_y = y;
-            },
+            }
             EventOption::Button(button_event) => {
                 let x = self.mouse_x;
                 let y = self.mouse_y;
                 if self.ransid.state.mouse_rxvt {
                     if button_event.left {
-                        if ! self.mouse_left {
+                        if !self.mouse_left {
                             let string = format!("\x1B[<{};{};{}M", 0, x, y);
                             self.input.extend(string.as_bytes());
                         }
@@ -254,16 +327,17 @@ impl Console {
                         let string = format!("\x1B[<{};{};{}m", 0, x, y);
                         self.input.extend(string.as_bytes());
                     }
-                } else if button_event.left && ! self.mouse_left {
+                } else if button_event.left && !self.mouse_left {
                     let i = (y as usize - 1) * self.ransid.state.w as usize + (x as usize - 1);
                     next_selection = Some((i, i));
                 }
 
                 self.mouse_left = button_event.left;
-            },
+            }
             EventOption::Scroll(scroll_event) => {
                 if self.ctrl {
-                    let new_block_width = (self.block_width as i32 + scroll_event.y.signum()) as usize;
+                    let new_block_width =
+                        (self.block_width as i32 + scroll_event.y.signum()) as usize;
                     self.set_block_size(new_block_width);
 
                     let w = self.window.width() as usize / self.block_width;
@@ -280,19 +354,20 @@ impl Console {
                         self.input.extend(string.as_bytes());
                     }
                 }
-            },
+            }
             EventOption::Resize(resize_event) => {
                 let w = resize_event.width as usize / self.block_width;
                 let h = resize_event.height as usize / self.block_height;
                 self.resize_grid(w, h);
                 self.sync();
-            },
-            _ => ()
+            }
+            _ => (),
         }
 
         if next_selection != self.selection {
             self.selection = next_selection;
-            self.write(&[], true).expect("failed to write empty buffer after updating selection");
+            self.write(&[], true)
+                .expect("failed to write empty buffer after updating selection");
         }
     }
 
@@ -334,12 +409,12 @@ impl Console {
         let alpha = self.alpha;
         let cvt = |color: ransid::Color| -> Color {
             Color {
-                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF)
+                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF),
             }
         };
 
         if let Some(selection) = self.last_selection {
-            for i in cmp::min(selection.0, selection.1) .. cmp::max(selection.0, selection.1) {
+            for i in cmp::min(selection.0, selection.1)..cmp::max(selection.0, selection.1) {
                 let x = i % self.ransid.state.w;
                 let y = i / self.ransid.state.w;
                 let block_width = self.block_width;
@@ -349,7 +424,10 @@ impl Console {
             }
         }
 
-        if self.ransid.state.cursor && self.ransid.state.x < self.ransid.state.w && self.ransid.state.y < self.ransid.state.h {
+        if self.ransid.state.cursor
+            && self.ransid.state.x < self.ransid.state.w
+            && self.ransid.state.y < self.ransid.state.h
+        {
             let x = self.ransid.state.x;
             let y = self.ransid.state.y;
             let block_width = self.block_width;
@@ -375,11 +453,31 @@ impl Console {
             let mut str_buf = [0; 4];
             self.ransid.write(buf, |event| {
                 match event {
-                    ransid::Event::Char { x, y, c, color, bold, .. } => {
+                    ransid::Event::Char {
+                        x,
+                        y,
+                        c,
+                        color,
+                        bold,
+                        ..
+                    } => {
                         if bold {
-                            font_bold.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, cvt(color));
+                            font_bold
+                                .render(&c.encode_utf8(&mut str_buf), block_height as f32)
+                                .draw(
+                                    window,
+                                    x as i32 * block_width as i32,
+                                    y as i32 * block_height as i32,
+                                    cvt(color),
+                                );
                         } else {
-                            font.render(&c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, cvt(color));
+                            font.render(&c.encode_utf8(&mut str_buf), block_height as f32)
+                                .draw(
+                                    window,
+                                    x as i32 * block_width as i32,
+                                    y as i32 * block_height as i32,
+                                    cvt(color),
+                                );
                         }
 
                         if let Some(ref mut block) = grid.get_mut(y * console_w + x) {
@@ -389,13 +487,19 @@ impl Console {
                         }
 
                         changed.insert(y);
-                    },
+                    }
                     ransid::Event::Input { data } => {
                         input.extend(data);
-                    },
+                    }
                     ransid::Event::Rect { x, y, w, h, color } => {
                         window.mode().set(Mode::Overwrite);
-                        window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, w as u32 * block_width as u32, h as u32 * block_height as u32, cvt(color));
+                        window.rect(
+                            x as i32 * block_width as i32,
+                            y as i32 * block_height as i32,
+                            w as u32 * block_width as u32,
+                            h as u32 * block_height as u32,
+                            cvt(color),
+                        );
                         window.mode().set(Mode::Blend);
 
                         for y2 in y..y + h {
@@ -407,7 +511,7 @@ impl Console {
                             }
                             changed.insert(y2);
                         }
-                    },
+                    }
                     ransid::Event::ScreenBuffer { alternate, clear } => {
                         if *alt != alternate {
                             mem::swap(grid, alt_grid);
@@ -424,14 +528,39 @@ impl Console {
                                     }
 
                                     window.mode().set(Mode::Overwrite);
-                                    window.rect(x as i32 * block_width as i32, y as i32 * block_height as i32, block_width as u32, block_height as u32, block.bg);
+                                    window.rect(
+                                        x as i32 * block_width as i32,
+                                        y as i32 * block_height as i32,
+                                        block_width as u32,
+                                        block_height as u32,
+                                        block.bg,
+                                    );
                                     window.mode().set(Mode::Blend);
 
                                     if block.c != '\0' {
                                         if block.bold {
-                                            font_bold.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, block.fg);
+                                            font_bold
+                                                .render(
+                                                    &block.c.encode_utf8(&mut str_buf),
+                                                    block_height as f32,
+                                                )
+                                                .draw(
+                                                    window,
+                                                    x as i32 * block_width as i32,
+                                                    y as i32 * block_height as i32,
+                                                    block.fg,
+                                                );
                                         } else {
-                                            font.render(&block.c.encode_utf8(&mut str_buf), block_height as f32).draw(window, x as i32 * block_width as i32, y as i32 * block_height as i32, block.fg);
+                                            font.render(
+                                                &block.c.encode_utf8(&mut str_buf),
+                                                block_height as f32,
+                                            )
+                                            .draw(
+                                                window,
+                                                x as i32 * block_width as i32,
+                                                y as i32 * block_height as i32,
+                                                block.fg,
+                                            );
                                         }
                                     }
                                 }
@@ -439,28 +568,39 @@ impl Console {
                             }
                         }
                         *alt = alternate;
-                    },
-                    ransid::Event::Move {from_x, from_y, to_x, to_y, w, h } => {
+                    }
+                    ransid::Event::Move {
+                        from_x,
+                        from_y,
+                        to_x,
+                        to_y,
+                        w,
+                        h,
+                    } => {
                         let width = window.width() as usize;
                         let pixels = window.data_mut();
 
                         for raw_y in 0..h {
-                            let y = if from_y > to_y {
-                                raw_y
-                            } else {
-                                h - raw_y - 1
-                            };
+                            let y = if from_y > to_y { raw_y } else { h - raw_y - 1 };
 
                             for pixel_y in 0..block_height {
                                 {
-                                    let off_from = ((from_y + y) * block_height + pixel_y) * width + from_x * block_width;
-                                    let off_to = ((to_y + y) * block_height + pixel_y) * width + to_x * block_width;
+                                    let off_from = ((from_y + y) * block_height + pixel_y) * width
+                                        + from_x * block_width;
+                                    let off_to = ((to_y + y) * block_height + pixel_y) * width
+                                        + to_x * block_width;
                                     let len = w * block_width;
 
-                                    if off_from + len <= pixels.len() && off_to + len <= pixels.len() {
+                                    if off_from + len <= pixels.len()
+                                        && off_to + len <= pixels.len()
+                                    {
                                         unsafe {
                                             let data_ptr = pixels.as_mut_ptr() as *mut u32;
-                                            ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), len);
+                                            ptr::copy(
+                                                data_ptr.offset(off_from as isize),
+                                                data_ptr.offset(off_to as isize),
+                                                len,
+                                            );
                                         }
                                     }
                                 }
@@ -474,18 +614,25 @@ impl Console {
                                 if off_from + len <= grid.len() && off_to + len <= grid.len() {
                                     unsafe {
                                         let data_ptr = grid.as_mut_ptr();
-                                        ptr::copy(data_ptr.offset(off_from as isize), data_ptr.offset(off_to as isize), len);
+                                        ptr::copy(
+                                            data_ptr.offset(off_from as isize),
+                                            data_ptr.offset(off_to as isize),
+                                            len,
+                                        );
                                     }
                                 }
                             }
 
                             changed.insert(to_y + y);
                         }
-                    },
+                    }
                     ransid::Event::Resize { w, h } => {
                         //TODO: Make sure grid is resized
-                        window.set_size(w as u32 * block_width as u32, h as u32 * block_height as u32);
-                    },
+                        window.set_size(
+                            w as u32 * block_width as u32,
+                            h as u32 * block_height as u32,
+                        );
+                    }
                     ransid::Event::Title { title } => {
                         window.set_title(&title);
                     }
@@ -493,7 +640,10 @@ impl Console {
             });
         }
 
-        if self.ransid.state.cursor && self.ransid.state.x < self.ransid.state.w && self.ransid.state.y < self.ransid.state.h {
+        if self.ransid.state.cursor
+            && self.ransid.state.x < self.ransid.state.w
+            && self.ransid.state.y < self.ransid.state.h
+        {
             let x = self.ransid.state.x;
             let y = self.ransid.state.y;
             let block_width = self.block_width;
@@ -503,7 +653,7 @@ impl Console {
         }
 
         if let Some(selection) = self.selection {
-            for i in cmp::min(selection.0, selection.1) .. cmp::max(selection.0, selection.1) {
+            for i in cmp::min(selection.0, selection.1)..cmp::max(selection.0, selection.1) {
                 let x = i % self.ransid.state.w;
                 let y = i / self.ransid.state.w;
                 let block_width = self.block_width;
@@ -526,18 +676,32 @@ impl Console {
         let alpha = self.alpha;
         let cvt = |color: ransid::Color| -> Color {
             Color {
-                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF)
+                data: ((alpha as u32) << 24) | (color.as_rgb() & 0xFFFFFF),
             }
         };
 
         if w != self.ransid.state.w || h != self.ransid.state.h {
-            let mut grid = vec![Block {
-                c: '\0', fg: cvt(self.ransid.state.foreground), bg: cvt(self.ransid.state.background), bold: false
-            }; w * h].into_boxed_slice();
+            let mut grid = vec![
+                Block {
+                    c: '\0',
+                    fg: cvt(self.ransid.state.foreground),
+                    bg: cvt(self.ransid.state.background),
+                    bold: false
+                };
+                w * h
+            ]
+            .into_boxed_slice();
 
-            let mut alt_grid = vec![Block {
-                c: '\0', fg: cvt(self.ransid.state.foreground), bg: cvt(self.ransid.state.background), bold: false
-            }; w * h].into_boxed_slice();
+            let mut alt_grid = vec![
+                Block {
+                    c: '\0',
+                    fg: cvt(self.ransid.state.foreground),
+                    bg: cvt(self.ransid.state.background),
+                    bold: false
+                };
+                w * h
+            ]
+            .into_boxed_slice();
 
             self.window.set(cvt(self.ransid.state.background));
 
@@ -557,14 +721,39 @@ impl Console {
                         }
 
                         window.mode().set(Mode::Overwrite);
-                        window.rect(x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, self.block_width as u32, self.block_height as u32, block.bg);
+                        window.rect(
+                            x as i32 * self.block_width as i32,
+                            y as i32 * self.block_height as i32,
+                            self.block_width as u32,
+                            self.block_height as u32,
+                            block.bg,
+                        );
                         window.mode().set(Mode::Blend);
 
                         if block.c != '\0' {
                             if block.bold {
-                                font_bold.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, block.fg);
+                                font_bold
+                                    .render(
+                                        &block.c.encode_utf8(&mut str_buf),
+                                        self.block_height as f32,
+                                    )
+                                    .draw(
+                                        window,
+                                        x as i32 * self.block_width as i32,
+                                        y as i32 * self.block_height as i32,
+                                        block.fg,
+                                    );
                             } else {
-                                font.render(&block.c.encode_utf8(&mut str_buf), self.block_height as f32).draw(window, x as i32 * self.block_width as i32, y as i32 * self.block_height as i32, block.fg);
+                                font.render(
+                                    &block.c.encode_utf8(&mut str_buf),
+                                    self.block_height as f32,
+                                )
+                                .draw(
+                                    window,
+                                    x as i32 * self.block_width as i32,
+                                    y as i32 * self.block_height as i32,
+                                    block.fg,
+                                );
                             }
                         }
                     }
@@ -576,7 +765,10 @@ impl Console {
             self.grid = grid;
             self.alt_grid = alt_grid;
 
-            if self.ransid.state.cursor && self.ransid.state.x < self.ransid.state.w && self.ransid.state.y < self.ransid.state.h {
+            if self.ransid.state.cursor
+                && self.ransid.state.x < self.ransid.state.w
+                && self.ransid.state.y < self.ransid.state.h
+            {
                 let x = self.ransid.state.x;
                 let y = self.ransid.state.y;
                 let block_width = self.block_width;
@@ -590,7 +782,13 @@ impl Console {
     }
 
     fn set_block_size(&mut self, block_width: usize) {
-        self.block_width = if block_width < 4 { 4 } else if block_width > 48 { 48 } else { block_width };
+        self.block_width = if block_width < 4 {
+            4
+        } else if block_width > 48 {
+            48
+        } else {
+            block_width
+        };
         self.block_height = self.block_width * 2;
     }
 
@@ -601,7 +799,7 @@ impl Console {
             self.display.sync(0, change * 16, width, 16);
         }
         */
-        if ! self.changed.is_empty() {
+        if !self.changed.is_empty() {
             self.window.sync();
         }
         self.changed.clear();

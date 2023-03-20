@@ -1,6 +1,6 @@
 use std::io;
 
-#[cfg(not(target_os="redox"))]
+#[cfg(not(target_os = "redox"))]
 pub fn before_exec() -> io::Result<()> {
     unsafe {
         if libc::setsid() < 0 {
@@ -14,7 +14,7 @@ pub fn before_exec() -> io::Result<()> {
     Ok(())
 }
 
-#[cfg(target_os="redox")]
+#[cfg(target_os = "redox")]
 pub fn before_exec() -> io::Result<()> {
     Ok(())
 }

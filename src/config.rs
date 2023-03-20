@@ -8,13 +8,13 @@ use xdg::BaseDirectories;
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub font: String,
-    pub font_bold: String
+    pub font_bold: String,
 }
 impl Default for Config {
     fn default() -> Self {
         Config {
             font: String::new(),
-            font_bold: String::new()
+            font_bold: String::new(),
         }
     }
 }
