@@ -15,7 +15,10 @@ extern crate libc;
 extern crate redox_termios;
 
 #[cfg(target_os = "redox")]
-extern crate syscall;
+extern crate libredox;
+
+#[cfg(target_os = "redox")]
+extern crate event;
 
 use std::io::Write;
 use std::os::unix::io::{AsRawFd, FromRawFd};

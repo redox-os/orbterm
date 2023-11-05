@@ -52,25 +52,27 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
 
 #[cfg(target_os = "redox")]
 pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
-    let master = syscall::open(
+    use libredox::{call as redox, flag};
+    let master = redox::open(
         "pty:",
-        syscall::O_CLOEXEC | syscall::O_RDWR | syscall::O_CREAT | syscall::O_NONBLOCK,
+        flag::O_CLOEXEC | flag::O_RDWR | flag::O_CREAT | flag::O_NONBLOCK,
+        0,
     )
     .unwrap();
 
-    if let Ok(winsize_fd) = syscall::dup(master, b"winsize") {
-        let _ = syscall::write(
+    if let Ok(winsize_fd) = redox::dup(master, b"winsize") {
+        let _ = redox::write(
             winsize_fd,
             &redox_termios::Winsize {
                 ws_row: lines as u16,
                 ws_col: columns as u16,
             },
         );
-        let _ = syscall::close(winsize_fd);
+        let _ = redox::close(winsize_fd);
     }
 
     let mut buf: [u8; 4096] = [0; 4096];
-    let count = syscall::fpath(master, &mut buf).unwrap();
+    let count = redox::fpath(master, &mut buf).unwrap();
     (master as RawFd, unsafe {
         String::from_utf8_unchecked(Vec::from(&buf[..count]))
     })

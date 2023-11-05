@@ -10,29 +10,29 @@ use console::Console;
 pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
     use std::os::unix::io::AsRawFd;
 
-    let mut event_file = File::open("event:").expect("terminal: failed to open event file");
+    use event::{EventFlags, EventQueue};
+    use libredox::call as redox;
+
+    event::user_data! {
+        enum EventSource {
+            Window,
+            Master,
+        }
+    };
+
+    let event_queue = EventQueue::<EventSource>::new().expect("terminal: failed to open event file");
 
     let window_fd = console.window.as_raw_fd();
-    event_file
-        .write(&syscall::data::Event {
-            id: window_fd as usize,
-            flags: syscall::flag::EVENT_READ,
-            data: 0,
-        })
+    event_queue.subscribe(window_fd as usize, EventSource::Window, EventFlags::READ)
         .expect("terminal: failed to fevent console window");
 
     let mut master = unsafe { File::from_raw_fd(master_fd) };
-    event_file
-        .write(&syscall::data::Event {
-            id: master_fd as usize,
-            flags: syscall::flag::EVENT_READ,
-            data: 0,
-        })
+    event_queue.subscribe(master_fd as usize, EventSource::Master, EventFlags::READ)
         .expect("terminal: failed to fevent master PTY");
 
-    let mut handle_event = |event_id: usize| -> bool {
-        if event_id == window_fd as usize {
-            for event in console.window.events() {
+    let mut handle_event = |event_source: EventSource| -> bool {
+        match event_source {
+            EventSource::Window => for event in console.window.events() {
                 let event_option = event.to_option();
 
                 let console_w = console.ransid.state.w;
@@ -45,37 +45,36 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                 }
 
                 if console_w != console.ransid.state.w || console_h != console.ransid.state.h {
-                    if let Ok(winsize_fd) = syscall::dup(master_fd as usize, b"winsize") {
-                        let _ = syscall::write(
+                    if let Ok(winsize_fd) = redox::dup(master_fd as usize, b"winsize") {
+                        let _ = redox::write(
                             winsize_fd,
                             &redox_termios::Winsize {
                                 ws_row: console.ransid.state.h as u16,
                                 ws_col: console.ransid.state.w as u16,
                             },
                         );
-                        let _ = syscall::close(winsize_fd);
+                        let _ = redox::close(winsize_fd);
                     }
                 }
             }
-        } else if event_id == master_fd as usize {
-            let mut packet = [0; 4096];
-            loop {
-                let count = match master.read(&mut packet) {
-                    Ok(0) => return false,
-                    Ok(count) => count,
-                    Err(ref err) if err.kind() == ErrorKind::WouldBlock => break,
-                    Err(_) => panic!("terminal: failed to read master PTY"),
-                };
-                console
-                    .write(&packet[1..count], true)
-                    .expect("terminal: failed to write to console");
+            EventSource::Master => {
+                let mut packet = [0; 4096];
+                loop {
+                    let count = match master.read(&mut packet) {
+                        Ok(0) => return false,
+                        Ok(count) => count,
+                        Err(ref err) if err.kind() == ErrorKind::WouldBlock => break,
+                        Err(_) => panic!("terminal: failed to read master PTY"),
+                    };
+                    console
+                        .write(&packet[1..count], true)
+                        .expect("terminal: failed to write to console");
 
-                if packet[0] & 1 == 1 {
-                    console.redraw();
+                    if packet[0] & 1 == 1 {
+                        console.redraw();
+                    }
                 }
             }
-        } else {
-            println!("Unknown event {}", event_id);
         }
 
         if !console.input.is_empty() {
@@ -92,15 +91,13 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
         true
     };
 
-    handle_event(window_fd as usize);
-    handle_event(master_fd as usize);
+    handle_event(EventSource::Window);
+    handle_event(EventSource::Master);
 
-    'events: loop {
-        let mut sys_event = syscall::Event::default();
-        event_file
-            .read(&mut sys_event)
-            .expect("terminal: failed to read event file");
-        if !handle_event(sys_event.id) {
+    'events: for event_res in event_queue {
+        let event = event_res.expect("terminal: failed to read event queue");
+
+        if !handle_event(event.user_data) {
             break 'events;
         }
 
