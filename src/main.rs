@@ -81,8 +81,8 @@ fn main() {
             .stderr(Stdio::from_raw_fd(slave_stderr.as_raw_fd()))
             // Not setting COLUMNS and LINES fixes many applications that use it
             // to quickly get the current terminal size instead of TIOCSWINSZ
-            .env("COLUMNS", "")
-            .env("LINES", "")
+            .env_remove("COLUMNS")
+            .env_remove("LINES")
             // It is useful to know if we are running inside of orbterm, some times
             .env("ORBTERM_VERSION", env!("CARGO_PKG_VERSION"))
             // We emulate xterm-256color
