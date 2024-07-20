@@ -54,7 +54,7 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
 pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
     use libredox::{call as redox, flag};
     let master = redox::open(
-        "pty:",
+        "/scheme/pty",
         flag::O_CLOEXEC | flag::O_RDWR | flag::O_CREAT | flag::O_NONBLOCK,
         0,
     )
