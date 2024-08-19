@@ -27,5 +27,5 @@ libc = "0.2.59"
 
 [target.'cfg(target_os = "redox")'.dependencies]
 redox_termios = "0.1.3"
-redox_event = "0.2.0"
+redox_event = "0.4.0"
 libredox = "0.0.2"
