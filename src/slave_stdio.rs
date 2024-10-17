@@ -31,26 +31,17 @@ pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
 
 #[cfg(target_os = "redox")]
 pub fn slave_stdio(tty_path: &str) -> Result<(File, File, File)> {
-    use libredox::{call, flag::{O_CLOEXEC, O_RDONLY, O_WRONLY}};
+    use libredox::{
+        call,
+        flag::{O_CLOEXEC, O_RDONLY, O_WRONLY},
+    };
 
-    let stdin = unsafe {
-        File::from_raw_fd(
-            call::open(tty_path, O_CLOEXEC | O_RDONLY, 0)
-                .map_err(|err| Error::from_raw_os_error(err.errno))? as RawFd,
-        )
-    };
-    let stdout = unsafe {
-        File::from_raw_fd(
-            call::open(tty_path, O_CLOEXEC | O_WRONLY, 0)
-                .map_err(|err| Error::from_raw_os_error(err.errno))? as RawFd,
-        )
-    };
-    let stderr = unsafe {
-        File::from_raw_fd(
-            call::open(tty_path, O_CLOEXEC | O_WRONLY, 0)
-                .map_err(|err| Error::from_raw_os_error(err.errno))? as RawFd,
-        )
-    };
+    let stdin =
+        unsafe { File::from_raw_fd(call::open(tty_path, O_CLOEXEC | O_RDONLY, 0)? as RawFd) };
+    let stdout =
+        unsafe { File::from_raw_fd(call::open(tty_path, O_CLOEXEC | O_WRONLY, 0)? as RawFd) };
+    let stderr =
+        unsafe { File::from_raw_fd(call::open(tty_path, O_CLOEXEC | O_WRONLY, 0)? as RawFd) };
 
     Ok((stdin, stdout, stderr))
 }
