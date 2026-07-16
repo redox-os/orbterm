@@ -11,7 +11,6 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
     use std::os::unix::io::AsRawFd;
 
     use event::{EventFlags, EventQueue};
-    use libredox::call as redox;
 
     event::user_data! {
         enum EventSource {
@@ -45,15 +44,16 @@ pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {
                 }
 
                 if console_w != console.ransid.state.w || console_h != console.ransid.state.h {
-                    if let Ok(winsize_fd) = redox::dup(master_fd as usize, b"winsize") {
-                        let _ = redox::write(
-                            winsize_fd,
-                            &redox_termios::Winsize {
-                                ws_row: console.ransid.state.h as u16,
-                                ws_col: console.ransid.state.w as u16,
-                            },
-                        );
-                        let _ = redox::close(winsize_fd);
+                    unsafe {
+                        let size = libc::winsize {
+                            ws_row: console.ransid.state.h as libc::c_ushort,
+                            ws_col: console.ransid.state.w as libc::c_ushort,
+                            ws_xpixel: 0,
+                            ws_ypixel: 0,
+                        };
+                        if libc::ioctl(master_fd, libc::TIOCSWINSZ, &size as *const libc::winsize) < 0 {
+                            panic!("ioctl: {:?}", io::Error::last_os_error());
+                        }
                     }
                 }
             }
