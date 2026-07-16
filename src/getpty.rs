@@ -1,6 +1,5 @@
 use std::os::unix::io::RawFd;
 
-#[cfg(not(target_os = "redox"))]
 pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
     use std::ffi::CStr;
     use std::fs::OpenOptions;
@@ -48,32 +47,4 @@ pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
             .into_owned()
     };
     (master_fd, tty_path)
-}
-
-#[cfg(target_os = "redox")]
-pub fn getpty(columns: u32, lines: u32) -> (RawFd, String) {
-    use libredox::{call as redox, flag};
-    let master = redox::open(
-        "/scheme/pty",
-        flag::O_CLOEXEC | flag::O_RDWR | flag::O_CREAT | flag::O_NONBLOCK,
-        0,
-    )
-    .unwrap();
-
-    if let Ok(winsize_fd) = redox::dup(master, b"winsize") {
-        let _ = redox::write(
-            winsize_fd,
-            &redox_termios::Winsize {
-                ws_row: lines as u16,
-                ws_col: columns as u16,
-            },
-        );
-        let _ = redox::close(winsize_fd);
-    }
-
-    let mut buf: [u8; 4096] = [0; 4096];
-    let count = redox::fpath(master, &mut buf).unwrap();
-    (master as RawFd, unsafe {
-        String::from_utf8_unchecked(Vec::from(&buf[..count]))
-    })
 }

@@ -5,7 +5,7 @@ use std::io::Result;
 use std::{cmp, mem, ptr};
 
 use config::Config;
-use orbclient::{Color, EventOption, Mode, Renderer, Window, WindowFlag};
+use orbclient::{Color, EventOption, MediaKind, Mode, Renderer, Window, WindowFlag};
 use orbfont::Font;
 
 #[derive(Clone, Copy, Debug)]
@@ -30,7 +30,6 @@ pub struct Console {
     pub mouse_left: bool,
     pub ctrl: bool,
     pub input: Vec<u8>,
-    pub requested: usize,
     pub block_width: usize,
     pub block_height: usize,
     pub default_block_width: usize,
@@ -109,7 +108,6 @@ impl Console {
             mouse_left: false,
             ctrl: false,
             input: Vec::new(),
-            requested: 0,
             block_width,
             block_height,
             default_block_width: block_width,
@@ -144,6 +142,42 @@ impl Console {
     pub fn input(&mut self, event_option: EventOption) {
         let mut next_selection = self.selection;
         match event_option {
+            EventOption::TextInput(key_event) => {
+                let mut buf = vec![];
+
+                let c = match key_event.character {
+                    // FIXME fix ctrl commands. They currently only produce a Key event, but that
+                    // doesn't contain which character was entered.
+
+                    // Copy with ctrl-shift-c
+                    'C' if self.ctrl => {
+                        let text = self.selection_text();
+                        self.window.set_clipboard(&text, MediaKind::Text);
+                        '\0'
+                    }
+                    // Paste with ctrl-shift-v
+                    'V' if self.ctrl => {
+                        buf.extend_from_slice(
+                            &self
+                                .window
+                                .clipboard()
+                                .map_or(String::new(), |(_kind, text)| text)
+                                .as_bytes(),
+                        );
+                        '\0'
+                    }
+                    c @ 'A'..='Z' if self.ctrl => ((c as u8 - b'A') + b'\x01') as char,
+                    c @ 'a'..='z' if self.ctrl => ((c as u8 - b'a') + b'\x01') as char,
+                    c => c,
+                };
+
+                if c != '\0' {
+                    let mut b = [0; 4];
+                    buf.extend_from_slice(c.encode_utf8(&mut b).as_bytes());
+                }
+
+                self.input.extend(buf);
+            }
             EventOption::Key(key_event) => {
                 let mut buf = vec![];
 
@@ -183,6 +217,10 @@ impl Console {
 
                             self.resize_grid(w, h);
                             self.sync();
+                        }
+                        orbclient::K_ENTER => {
+                            // Enter
+                            buf.extend_from_slice(b"\r");
                         }
                         orbclient::K_BKSP => {
                             // Backspace
@@ -265,30 +303,7 @@ impl Console {
                         orbclient::K_F12 => {
                             buf.extend_from_slice(b"\x1b[24~");
                         }
-                        _ => {
-                            let c = match key_event.character {
-                                '\n' => '\r',
-                                // Copy with ctrl-shift-c
-                                'C' if self.ctrl => {
-                                    let text = self.selection_text();
-                                    self.window.set_clipboard(&text);
-                                    '\0'
-                                }
-                                // Paste with ctrl-shift-v
-                                'V' if self.ctrl => {
-                                    buf.extend_from_slice(&self.window.clipboard().as_bytes());
-                                    '\0'
-                                }
-                                c @ 'A'..='Z' if self.ctrl => ((c as u8 - b'A') + b'\x01') as char,
-                                c @ 'a'..='z' if self.ctrl => ((c as u8 - b'a') + b'\x01') as char,
-                                c => c,
-                            };
-
-                            if c != '\0' {
-                                let mut b = [0; 4];
-                                buf.extend_from_slice(c.encode_utf8(&mut b).as_bytes());
-                            }
-                        }
+                        _ => {}
                     }
                 }
 
