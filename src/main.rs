@@ -3,19 +3,11 @@ extern crate serde_derive;
 #[cfg(feature = "env_logger")]
 extern crate env_logger;
 extern crate failure;
+extern crate libc;
 extern crate orbclient;
 extern crate orbfont;
 extern crate toml;
 extern crate xdg;
-
-#[cfg(not(target_os = "redox"))]
-extern crate libc;
-
-#[cfg(target_os = "redox")]
-extern crate redox_termios;
-
-#[cfg(target_os = "redox")]
-extern crate libredox;
 
 #[cfg(target_os = "redox")]
 extern crate event;
