@@ -1,10 +1,8 @@
-extern crate ransid;
-
 use std::collections::BTreeSet;
 use std::io::Result;
 use std::{cmp, mem, ptr};
 
-use config::Config;
+use crate::config::Config;
 use orbclient::{Color, EventOption, MediaKind, Mode, Renderer, Window, WindowFlag};
 use orbfont::Font;
 
