@@ -5,6 +5,7 @@ repository = "https://gitlab.redox-os.org/redox-os/orbterm"
 version = "0.3.6"
 license = "MIT"
 readme = "README.md"
+edition = "2021"
 authors = ["Jeremy Soller <jackpot51@gmail.com>"]
 
 [[bin]]
@@ -15,7 +16,7 @@ path = "src/main.rs"
 env_logger = { version = "0.8", optional = true }
 failure = "0.1.5"
 libc = "0.2.59"
-orbclient = "0.4.3"
+orbclient = "0.4.6"
 orbfont = "0.4.0"
 ransid = "0.5.0"
 serde = "1.0.94"

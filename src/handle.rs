@@ -4,7 +4,7 @@ use std::io::{self, ErrorKind, Read, Write};
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::process::Child;
 
-use console::Console;
+use crate::console::Console;
 
 #[cfg(target_os = "redox")]
 pub fn handle(console: &mut Console, master_fd: RawFd, process: &mut Child) {

@@ -1,16 +1,5 @@
 #[macro_use]
 extern crate serde_derive;
-#[cfg(feature = "env_logger")]
-extern crate env_logger;
-extern crate failure;
-extern crate libc;
-extern crate orbclient;
-extern crate orbfont;
-extern crate toml;
-extern crate xdg;
-
-#[cfg(target_os = "redox")]
-extern crate event;
 
 use std::io::Write;
 use std::os::unix::io::{AsRawFd, FromRawFd};
